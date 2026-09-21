@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1789939200.45099 "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" "proposal-template.pdf" "proposal-template" 1789939201.65329 0
+["pdflatex"] 1789952696.37669 "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" "proposal-template.pdf" "proposal-template" 1789952697.30254 0
   "C:/Users/leexu/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1789932022 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/leexu/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/tcrm1095.pk" 1789932025 12668 40d1c5b6297076e1680838d99039b48f ""
   "C:/Users/leexu/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1789931761 13333487 daf463df8f99abdef29e9a83cd6d2218 ""
@@ -160,10 +160,10 @@
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/tex/latex/trimspaces/trimspaces.sty" 1253169183 1380 971a51b00a14503ddf754cab24c3f209 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" 1789939199 10246 26c68f75735d48cdb8bd0ae7ceba198d ""
-  "proposal-template.aux" 1789939201 2237 619c0d8ba8704a59d60fafed0b060b1b "pdflatex"
-  "proposal-template.out" 1789939201 1854 eec9f6dc036a8da51785137c393eec44 "pdflatex"
-  "proposal-template.tex" 1789939199 10246 26c68f75735d48cdb8bd0ae7ceba198d ""
+  "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" 1789952694 10480 271085630b560a71dff3c8b29a377e1b ""
+  "proposal-template.aux" 1789952697 2471 55773c4410bbbe2a11c25d69051d1fbf "pdflatex"
+  "proposal-template.out" 1789952697 1854 eec9f6dc036a8da51785137c393eec44 "pdflatex"
+  "proposal-template.tex" 1789952694 10480 271085630b560a71dff3c8b29a377e1b ""
   (generated)
   "proposal-template.aux"
   "proposal-template.log"
