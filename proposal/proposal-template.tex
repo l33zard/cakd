@@ -31,189 +31,292 @@
 \titleformat{\section}{\large\bfseries\color{courseblue}}{}{0em}{}[\titlerule]
 \titleformat{\subsection}{\normalsize\bfseries\color{courseblue}}{}{0em}{}
 
-%% ════════════════════════════════════════════════════════════════
-%% INSTRUCTIONS FOR STUDENTS
-%% Replace every [PLACEHOLDER] with your actual content.
-%% Delete all \guidancebox blocks before submitting.
-%% Submit as a compiled PDF + .tex source in a .zip archive.
-%% ════════════════════════════════════════════════════════════════
-
 \begin{document}
 
 {\centering
-  {\Large\textbf{CISC 473: Deep Learning --- Project Proposal}}\\[0.5em]
-  {\large\textit{P22: Cross-Architecture Knowledge Distillation}}\\[0.4em]
-  \textbf{Group Members:}\\{}
-  Lee Xuan \quad 20630324 \quad (Role: Engineering Lead)\\{}
-  Fong Yee Xin \quad [Student ID] \quad (Role: Engineering Lead)\\[0.3em]
-  \textbf{GitHub Repository:} \url{https://github.com/l33zard/cakd.git}\\[0.3em]
-  \textbf{Date:} \today\\[0.4em]
+  {\Large\textbf{CISC 473: Deep Learning --- Project Proposal}}\par\vspace{0.5em}
+  {\large\textit{P22: Cross-Architecture Knowledge Distillation}}\par\vspace{0.4em}
+  \textbf{Group Members:}\par
+  Lee Xuan \quad 20630324 \quad (Role: Project Lead)\par
+  Fong Yee Xin \quad 20629927 \quad (Role: Engineering Lead)\par
+  \textbf{GitHub Repository:} \url{https://github.com/l33zard/cakd.git}\par\vspace{0.3em}
+  \textbf{Date:} \today\par\vspace{0.4em}
   \rule{\linewidth}{0.4pt}
 }
 
 \section{Problem Statement and Motivation}
 
-\begin{guidancebox}
-\textbf{Guidance (delete before submitting).}
-Clearly define the problem you are solving. Explain \emph{why} it matters
-in a broader context. Reference 1--2 high-level papers or application areas.
-This section should answer: ``What problem are we addressing, and who cares?''
-Target: $\approx$300 words.
-\end{guidancebox}
+Knowledge distillation (KD) is the process of compressing a large, high-capacity
+model---the \emph{teacher}---into a smaller, cheaper \emph{student} model that
+preserves much of the teacher's predictive accuracy. Rather than training the
+student on hard one-hot labels alone, KD trains it to match the teacher's
+softened output distribution, which encodes the teacher's learned similarity
+structure over classes~[1]. Subsequent work showed that additional supervision
+can be extracted from intermediate representations rather than logits
+alone~[2,~5].
 
-[WRITE YOUR PROBLEM STATEMENT HERE. Describe the task, why it is hard, and why
-it is important. Situate it within a research or application context.]
+The efficiency goal is concrete. Serving large models means routing billions of
+queries through energy-hungry data centres, and there is a strong push to move
+inference onto personal and embedded hardware---smartphones, laptops, wearables
+and automotive chips---so that features work instantly, offline, and without
+transmitting sensitive data. Such devices impose strict memory, latency and
+power budgets, and typically execute on CPUs or small accelerators where
+parameter count and FLOPs directly determine feasibility. Distillation allows a
+compact student to inherit teacher behaviour while cutting inference cost,
+making real-time deployment in robotics, autonomous systems and edge vision
+practical.
 
-Knowledge distillation is the process of compressing a large and more complex model, known as the teacher, into a smaller, simpler model, known as the student, and in the process of doing so, preserve much of the teacher's accuracy. This process is relevant in the current day and age for 3 different reasons. 
+\emph{Cross-architecture} KD is the harder setting in which teacher and student
+belong to different architectural families. We focus on the gap between
+convolutional neural networks (CNNs) and vision transformers (ViTs). CNNs encode
+images as hierarchical spatial feature maps produced by local convolutions and
+carry a strong locality and translation-equivariance prior; ViTs~[11] encode images
+as sequences of patch tokens related by global self-attention. Their intermediate
+representations therefore differ in structure, dimensionality and inductive
+bias, so feature-level transfer methods designed for CNN-to-CNN pairs do not
+apply directly, and logit-only KD discards most of the teacher's internal
+knowledge.
 
-Firstly, running a model for everyday users translates to companies needing to route billions of daily user queries through massive, energy-hungry data centers, an expensive process. Through distillation, the model can be shrunk such that they require significantly less computing power, minimising cloud hosting and electricity bills. 
+This project benchmarks established KD methods on CIFAR-100 and proposes an
+intermediate-feature alignment strategy for CNN-to-ViT transfer, evaluated under
+a matched parameter and FLOP budget and diagnosed using representational
+similarity analysis.
 
-Secondly, there is currently a transition from cloud-based AI to AI systems that run directly on personal hardware. This would allow AI features to work instantly, offline and without uploading sensitive data to an external server. This is however limited by the strict memory and battery constraints that exist in smaller personal devices like smartphones, smartwatches, laptops and automotive computer chips. Knowledge distillation would compress state-of-the-art AI so that these personal devices could better handle AI systems directly. 
-
-Thirdly, knowledge distillation enables smaller student models to retain much of the predictive performance of larger teacher models while requiring less computation during inference. This can reduce inference latency and resource requirements, making distilled models more suitable for real-time and resource-constrained applications such as autonomous systems, robotics, and edge devices, fields that are increasingly adopting AI-driven systems. 
-
-However, knowledge distillation becomes more challenging when the teacher and student use different architectures. In particular, we look at the architecture gap between convolutional neural network (CNN) and vision transformer (ViT) as they learn and represent visual information differently, making the transfer of intermediate representations between them more complex. To be more specific, CNNs represent images through hierarchical spatial feature maps produced by convolutional operations, while ViTs represent images as sequences of patch tokens and model relationships between them using self-attention. As a result, their intermediate representations differ in structure, making direct feature-level knowledge transfer difficult. This project investigates different methods of knowledge distillation, benchmarked on CIFAR-100, and proposes an intermediate-feature alignment strategy for CNN-to-ViT knowledge distillation. 
 \section{Literature Survey}
-
-\begin{guidancebox}
-\textbf{Guidance (delete before submitting).}
-Summarise at least \textbf{5 related papers}. For each paper:
-(1) state the core idea in one sentence, (2) describe what it achieves,
-and (3) explain how your project relates to or differs from it.
-Avoid copying abstracts verbatim. Identify at least one open problem
-that motivates your proposed approach.
-\end{guidancebox}
 
 \subsection{Related Works}
 
-\paragraph{[Decoupled Knowledge Distillation: Borui Zhao, Quan Cui, Renjie Song, Yiyu Qiu, Jiajun Liang, 2022, CVPR 2022.]}
-https://arxiv.org/abs/2203.08679
-[One-paragraph summary: what they proposed, what benchmark they evaluated on,
-what metric they achieved, and how this relates to your project.]
+\paragraph{[1] Hinton, Vinyals \& Dean, 2015. ``Distilling the Knowledge in a Neural Network.'' NeurIPS Deep Learning Workshop. arXiv:1503.02531.}
+The paper introduces vanilla KD: the student minimises a weighted combination of
+the cross-entropy loss on ground-truth labels and a Kullback--Leibler divergence
+against the teacher's logits softened by a temperature $\tau$. The softened
+distribution exposes ``dark knowledge''---the relative probabilities the teacher
+assigns to incorrect classes---and the authors demonstrate consistent gains for
+compact students on MNIST and large-scale speech recognition, as well as for
+distilling ensembles into single models. Vanilla KD is our first baseline and
+the logit-level loss term that our proposed alignment loss is added on top of;
+it is also the only listed method that is trivially architecture-agnostic, since
+it operates purely on output distributions.
 
-\paragraph{[Contrastive Representation Distillation: Yonglong Tian, Dilip Krishnan, Phillip Isola, 2020, ICLR 2020.]}
-https://arxiv.org/abs/1910.10699
-[Summary\ldots]
+\paragraph{[2] Tian, Krishnan \& Isola, 2020. ``Contrastive Representation Distillation.'' ICLR. arXiv:1910.10699.}
+CRD reformulates distillation as maximising a lower bound on the mutual
+information between teacher and student representations, using a contrastive
+objective that pulls together teacher--student features of the same input and
+pushes apart features of different inputs drawn from a memory bank. It
+outperforms vanilla KD and a broad suite of feature-matching methods on
+CIFAR-100 and ImageNet, including several teacher--student pairs with differing
+CNN families. CRD is a strong feature-level baseline for us; unlike our work, it
+compares pooled global embeddings and does not address the token-versus-spatial
+mismatch that arises when the student is a transformer.
 
-\paragraph{[Distilling Knowledge via Knowledge Review: Pengguang Chen, Shu Liu, Hengshuang Zhao, Jiaya Jia, 2021, CVPR 2021.]}
-https://arxiv.org/abs/2104.09044
-[Summary\ldots]
+\paragraph{[3] Zhao, Cui, Song, Qiu \& Liang, 2022. ``Decoupled Knowledge Distillation.'' CVPR. arXiv:2203.08679.}
+DKD decomposes the classical KD loss into target-class knowledge distillation
+(TCKD) and non-target-class knowledge distillation (NCKD), showing analytically
+that the standard formulation couples the NCKD term to the teacher's confidence
+on the target class and thereby suppresses exactly the signal that carries most
+of the dark knowledge. Decoupling and independently reweighting the two terms
+recovers or exceeds state-of-the-art feature-based methods on CIFAR-100,
+ImageNet and MS-COCO at essentially no extra training cost. DKD serves as our
+strongest logit-only baseline and establishes the reference our cross-architecture
+method must beat to justify its additional alignment module.
 
-\paragraph{[Paper 4: Authors, Year, Venue.]}
-[Summary\ldots]
+\paragraph{[4] Chen, Liu, Zhao \& Jia, 2021. ``Distilling Knowledge via Knowledge Review.'' CVPR. arXiv:2104.09044.}
+ReviewKD argues that conventional feature distillation pairs layers at the same
+depth, whereas a student's deeper layers can profitably ``review'' the teacher's
+shallower features. It introduces cross-stage connections together with an
+attention-based fusion module and a hierarchical context loss to aggregate
+multi-level teacher features, yielding consistent improvements on
+classification, detection and segmentation. ReviewKD directly motivates our
+study of \emph{which} layer pairs to align: because CNN and ViT depth semantics
+do not correspond, layer-pair selection becomes an explicit ablation axis in our
+work rather than a fixed design choice.
 
-\paragraph{[Paper 5: Authors, Year, Venue.]}
-[Summary\ldots]
+\paragraph{[5] Romero, Ballas, Kahou, Chassang, Gatta \& Bengio, 2015. ``FitNets: Hints for Thin Deep Nets.'' ICLR. arXiv:1412.6550.}
+FitNets is the original intermediate-feature distillation method: a ``hint''
+layer in the teacher supervises a ``guided'' layer in the student through an
+$L_2$ loss, with a learnable regressor inserted to reconcile the mismatched
+feature dimensionalities before the standard KD objective is applied. This made
+it possible to train students that are deeper and thinner than their teachers.
+Our projection module is a direct descendant of the FitNets regressor,
+generalised from a channel-dimension mismatch between two CNNs to a
+structural mismatch between a spatial feature map and a patch-token sequence.
+
+\paragraph{[6] Kornblith, Norouzi, Lee \& Hinton, 2019. ``Similarity of Neural Network Representations Revisited.'' ICML. arXiv:1905.00414.}
+The paper analyses measures of representational similarity and shows that
+Centered Kernel Alignment (CKA) is invariant to orthogonal transformation and
+isotropic scaling while remaining sensitive to genuine differences, unlike CCA
+variants; this makes it reliable for comparing layers of different widths or of
+independently trained networks. We adopt CKA both as a diagnostic---quantifying
+how CNN-teacher and ViT-student representations relate before and after
+distillation---and, optionally, as a differentiable alignment objective.
+
+\paragraph{[7] Park, Kim, Lu \& Cho, 2019. ``Relational Knowledge Distillation.'' CVPR. arXiv:1904.05068.}
+RKD transfers the \emph{structure} of the teacher's embedding space rather than
+individual activations, penalising discrepancies in pairwise distances and
+triplet angles among samples in a mini-batch. Because it constrains only
+relations between examples, it is insensitive to the absolute geometry and
+dimensionality of either representation space. This property is attractive for
+cross-architecture transfer and gives us a natural secondary comparison for our
+projection-based alignment.
 
 \subsection{Open Problem}
 
-\begin{guidancebox}
-\textbf{Guidance.} Identify a specific gap, limitation, or unexplored direction
-in the related work that motivates your novel contribution. Be precise.
-\end{guidancebox}
-
-[DESCRIBE THE OPEN PROBLEM OR GAP YOUR PROJECT WILL ADDRESS.]
+Existing feature-level distillation methods [2,~4,~5,~7] are developed and
+evaluated almost exclusively on CNN-to-CNN pairs, while the methods that
+transfer cleanly across architectures [1,~3] use logits only and therefore
+discard intermediate knowledge. Cross-architecture KD with a CNN teacher and a
+ViT student consequently lacks (i) a systematic study of how to align spatial
+feature maps with patch-token sequences, including which layer pairs should be
+matched when depth semantics do not correspond; (ii) an efficiency analysis that
+reports accuracy jointly with parameters, FLOPs and training cost under a
+matched budget, as required for CPU and edge deployment; and (iii) a principled
+diagnosis of \emph{why} transfer succeeds or fails---temperature and
+loss-weighting ablations are rarely reported for this setting, and CKA-based
+analysis of teacher--student representational similarity [6] has not been applied
+to it. This project addresses all three gaps.
 
 \section{Proposed Methodology}
 
-\begin{guidancebox}
-\textbf{Guidance.}
-Describe your approach in enough detail that it could be reproduced:
-(1) baseline model and dataset you will start with,
-(2) your proposed modification or extension and \emph{why} you chose it,
-(3) how you will evaluate success (metrics, baselines).
-Include a diagram if helpful. Target: $\approx$400 words.
-\end{guidancebox}
-
 \subsection{Baseline}
 
-[DESCRIBE THE BASELINE MODEL AND DATASET. Which existing code/checkpoint will
-you start from? Which metric will you use to evaluate the baseline?]
+\textbf{Dataset.} All experiments use CIFAR-100~[12]: 60{,}000 $32\times32$ colour
+images across 100 classes, with the standard 50{,}000/10{,}000 train/test split.
+We hold out 5{,}000 training images as a validation set for hyperparameter and
+checkpoint selection. Standard augmentation (random crop with 4-pixel padding,
+horizontal flip, per-channel normalisation) is applied. If compute permits, we
+will scale the best configuration to TinyImageNet ($64\times64$, 200 classes) to
+test whether conclusions hold at higher resolution.
 
-We will use CIFAR-100 as the primary dataset for training and evaluating all models. We will first establish non-distilled performance by evaluating the teacher and student models using standard supervised training. For the main cross-architecture experiment, a ResNet-50 will be used as the CNN teacher and a DeiT-Tiny as the ViT student. The performance of the DeiT-Tiny trained without knowledge distillation will serve as the primary student baseline.
-We will then reproduce established knowledge distillation methods, including Vanilla Knowledge Distillation (KD), Contrastive Representation Distillation (CRD), and Decoupled Knowledge Distillation (DKD). These methods will provide additional baselines for determining whether our proposed cross-architecture feature-alignment method provides an improvement over existing distillation approaches. We will build upon existing official or publicly available implementations and pretrained checkpoints where appropriate. The primary evaluation metric will be top-1 classification accuracy on the CIFAR-100 test set, with computational cost measured using FLOPs.
+\textbf{Models.} The CNN-to-CNN teacher is ResNet-110~[8] trained on CIFAR-100 with
+the standard recipe; the corresponding student is MobileNetV2~[9], giving a
+conventional compression baseline. For the cross-architecture setting we use a
+ResNet-50~[8] teacher, whose wider stage outputs are better matched to a token
+embedding dimension, and a DeiT-Tiny~[10] student (192-dimensional embedding, 12
+layers, 3 heads) adapted to $32\times32$ inputs with a reduced patch size.
+
+\textbf{Reproduced baselines.} We will reproduce Vanilla KD~[1], CRD~[2],
+DKD~[3] and ReviewKD~[4] starting from the RepDistiller framework and the
+authors' official releases, retaining their published hyperparameters where
+available so that reported numbers can be validated before we modify anything.
+
+\textbf{Metrics.} Top-1 test accuracy is the primary metric; we additionally
+report top-5 accuracy, parameter count, inference FLOPs and wall-clock training
+time per run, so that any accuracy gain can be read against its cost.
 
 \subsection{Proposed Extension}
 
-[DESCRIBE YOUR PROPOSED MODIFICATION OR EXTENSION. Why do you expect it to
-help? What is the key hypothesis you are testing?]
+CNN feature maps $F_T \in \mathbb{R}^{C \times H \times W}$ and ViT token
+sequences $F_S \in \mathbb{R}^{N \times D}$ cannot be compared directly. We
+propose a lightweight intermediate-feature alignment module that operates
+entirely outside the student, leaving the DeiT architecture unmodified. The
+teacher map is spatially pooled or bilinearly interpolated to a $\sqrt{N} \times
+\sqrt{N}$ grid, flattened into $N$ vectors, and passed through a learnable
+$1\times1$ projection $\mathbb{R}^{C} \to \mathbb{R}^{D}$. The resulting
+pseudo-tokens are aligned with the student's tokens by an alignment loss
+$\mathcal{L}_{\text{align}}$, instantiated either as a differentiable CKA
+objective~[6] or as an attention-map transfer loss that matches the teacher's
+spatial activation statistics to the student's self-attention maps. The total
+objective is
+\[
+\mathcal{L} = (1-\alpha)\,\mathcal{L}_{\text{CE}}
+            + \alpha\,\tau^{2}\,\mathcal{L}_{\text{KD}}(\tau)
+            + \beta\,\mathcal{L}_{\text{align}} .
+\]
+Because the projection is discarded at inference, the deployed student's
+parameter count and FLOPs are unchanged.
 
-Our proposed extension focuses on improving the transfer of intermediate representations between a CNN teacher and a ViT student. Because these representations differ in both structure and dimensionality, they cannot be directly aligned for feature-level knowledge distillation.
-We propose an intermediate-feature alignment module that transforms the CNN teacher's feature maps into a representation compatible with the ViT student's patch-token representations. The CNN feature maps will first be converted from their spatial representation into a sequence of feature vectors. A learnable projection will then transform the CNN channel dimension to the ViT embedding dimension, while spatial pooling or interpolation can be used where necessary to align the number of teacher features with the number of student patch tokens. This enables a feature-level distillation loss to be computed between the aligned teacher and student representations.
-Our key hypothesis is that explicitly aligning the intermediate representations of the CNN teacher and ViT student will allow the student to learn additional information that is not captured solely by the teacher's output predictions, thereby improving cross-architecture knowledge distillation.
+\textbf{Hypothesis.} Explicit CKA or attention-based alignment of intermediate
+representations gives the DeiT-Tiny student supervision that logit-only KD
+cannot provide, improving top-1 accuracy over Vanilla KD, CRD, DKD and ReviewKD
+at a matched parameter and FLOP budget.
+
+\textbf{Ablations.} We will sweep the temperature $\tau \in \{1,2,4,8,16\}$, the
+distillation weight $\alpha$, the alignment weight $\beta$, the choice of
+alignment loss, and the teacher--student layer pairs (early, middle, late and
+multi-layer combinations), following the layer-pairing question raised by
+ReviewKD~[4].
 
 \subsection{Evaluation Plan}
 
-[DESCRIBE YOUR EVALUATION PLAN:
 \begin{itemize}[noitemsep]
-  \item Dataset(s) and split(s) you will use
-  \item Metrics (e.g., PSNR/SSIM, ROUGE-L, F1, AUROC)
-  \item Baselines you will compare against
-  \item Number of seeds / runs for statistical reliability
-\end{itemize}]
-
-All experiments will use CIFAR-100 with consistent training, validation, and test splits across methods. We will compare the normally trained DeiT-Tiny student against Vanilla KD, CRD, DKD, and our proposed intermediate-feature alignment method using a ResNet-50 teacher.
-The primary metric will be top-1 classification accuracy, while FLOPs will be reported to evaluate computational efficiency. We will additionally use Centered Kernel Alignment (CKA) to measure the similarity between teacher and student intermediate representations before and after distillation. This will allow us to investigate whether our proposed method produces greater representational alignment between the CNN and ViT.
-We will perform ablation studies over the distillation temperature \(T \in \{1,2,4,8,16\}\) and the weights assigned to the different components of the distillation loss. Each main experiment will be conducted using at least three independent runs with fixed random seeds, and the resulting performance will be aggregated to improve statistical reliability.
+  \item \textbf{Dataset and splits.} CIFAR-100 with the standard train/test
+        split and a fixed 5{,}000-image validation subset held out from training;
+        identical splits, augmentation and schedules across all methods.
+        Optional TinyImageNet scale-up.
+  \item \textbf{Baselines.} DeiT-Tiny and MobileNetV2 trained from scratch
+        (lower bound), Vanilla KD~[1], CRD~[2], DKD~[3], ReviewKD~[4], and the
+        teacher's own accuracy (upper bound).
+  \item \textbf{Metrics.} Top-1 and top-5 accuracy, parameters, FLOPs, training
+        time, and layer-wise CKA similarity between teacher and student measured
+        before and after distillation.
+  \item \textbf{Statistical reliability.} Every main result uses at least three
+        independent runs with fixed seeds, reported as mean $\pm$ standard
+        deviation; ablation sweeps use a single seed for screening, with the
+        selected configurations rerun over three seeds.
+\end{itemize}
 
 \subsection{Early Novel Contribution (Optional Bonus)}
 
-\begin{guidancebox}
-\textbf{Guidance.} If you have already identified a specific novel contribution
-(a gap in existing evaluations, an untested configuration, a new domain),
-describe it here for the +2 bonus points. Be concrete and specific.
-\end{guidancebox}
-
-[DESCRIBE YOUR NOVEL CONTRIBUTION IDEA, OR LEAVE THIS SECTION EMPTY.]
+We propose two concrete contributions. First, a systematic CKA-based study of
+CNN-to-ViT knowledge distillation: layer-wise CKA heatmaps between a ResNet
+teacher and a DeiT-Tiny student, measured before and after distillation under
+each baseline method, which to our knowledge has not been reported and would
+give a diagnostic account of where cross-architecture transfer breaks down.
+Second, a lightweight intermediate-feature alignment module that requires no
+modification to the ViT architecture and adds no inference-time cost, since the
+projection is used only during training. If the ablations show that alignment
+improves student accuracy under a matched parameter and FLOP budget, and that
+the improvement is accompanied by measurably higher CKA similarity, we will
+submit this as our +2 bonus contribution.
 
 \section{Project Timeline and Roles}
-
-\begin{guidancebox}
-\textbf{Guidance.} Provide a week-by-week plan. Assign each task to a named
-group member. The plan must be specific enough to hold yourselves accountable.
-\end{guidancebox}
 
 \begin{center}
 \begin{tabular}{lp{7cm}l}
 \toprule
 \textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
 \midrule
-1--2 & Literature review; CIFAR-100 pipeline; teacher and student baseline training (ResNet-110/MobileNetV2); \textbf{Proposal due} & Fong Yee Xin \\
-3 & Vanilla KD; temperature and distillation-weight ablations & Lee Xuan \\
-4 & CRD and DKD distillation baselines & Fong Yee Xin \\
-5 & ResNet-50 and DeiT-Tiny baselines; cross-architecture distillation: ResNet-50 $\rightarrow$ DeiT-Tiny & Lee Xuan \\
-6 & CKA analysis before/after distillation; \textbf{Midterm due} & Fong Yee Xin \\
-7 & Develop intermediate-feature alignment for CNN $\rightarrow$ ViT distillation & Lee Xuan \\
-8 & Extended experiments and ablations; efficiency analysis (accuracy vs.\ FLOPs) & Fong Yee Xin \\
-9 & Results analysis; accuracy tables; CKA heatmaps; report writing & Lee Xuan \\
-10 & Final report and reproducibility checks; \textbf{Final due} & Fong Yee Xin \\
+1--2 & Read DKD, CRD and ReviewKD; environment and repository setup; CIFAR-100 data pipeline; train ResNet-110 teacher and from-scratch student baselines; \textbf{Proposal due} & Lee Xuan \& Fong Yee Xin \\
+3 & Vanilla KD implementation; temperature $\tau$ and distillation-weight $\alpha$ ablations & Lee Xuan \\
+4 & CRD distillation baseline; memory-bank and negative-sampling configuration & Fong Yee Xin \\
+5 & DKD distillation baseline; ResNet-50 and DeiT-Tiny setup for cross-architecture ResNet-50 $\rightarrow$ DeiT-Tiny transfer & Fong Yee Xin \\
+6 & ReviewKD baseline; layer-wise CKA analysis before and after distillation; \textbf{Midterm due} & Lee Xuan \\
+7 & Intermediate-feature alignment module for the CNN $\rightarrow$ ViT case; projection and alignment-loss implementation & Fong Yee Xin \\
+8 & Extended experiments and ablations ($\beta$, layer pairs, alignment loss); efficiency analysis of accuracy vs.\ FLOPs & Lee Xuan \& Fong Yee Xin \\
+9 & Results analysis; accuracy tables with mean $\pm$ std; CKA heatmaps; report writing & Lee Xuan \\
+10 & Final report, reproducibility checks, README and code release; \textbf{Final due} & Lee Xuan \& Fong Yee Xin \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \subsection{Contribution Declaration}
 
-\begin{tabular}{lcc}
+\begin{center}
+\begin{tabular}{lp{7cm}c}
 \toprule
 \textbf{Member} & \textbf{Primary Responsibilities} & \textbf{Estimated \%} \\
 \midrule
-{Lee Xuan} & Literature review, report writing, Data pipeline, evaluation code & 50\%  \\
-{Fong Yee Xin}& README, Model implementation, experiments & 50\%  \\
+Lee Xuan (Project Lead) & Project coordination, literature review, Vanilla KD and ReviewKD baselines, CKA analysis, efficiency analysis, report writing & 50\% \\
+Fong Yee Xin (Engineering Lead) & Data and training pipeline, CRD and DKD baselines, cross-architecture setup, feature-alignment module implementation, ablation design and execution, evaluation code and README & 50\% \\
 \bottomrule
 \end{tabular}
+\end{center}
 
 \section{References}
 
-\begin{guidancebox}
-\textbf{Guidance.} Use consistent citation formatting. Include at minimum the 5
-papers from Section~2, plus any other papers you reference.
-arXiv IDs and DOIs are preferred over URLs.
-\end{guidancebox}
-
 \begin{enumerate}[label={[\arabic*]},leftmargin=*]
-  \item [Author(s), Year. ``Title.'' \textit{Venue}. arXiv:XXXX.XXXXX or DOI.]
-  \item [Author(s), Year. ``Title.'' \textit{Venue}.]
-  \item [\ldots]
+  \item Hinton, G., Vinyals, O., and Dean, J., 2015. ``Distilling the Knowledge in a Neural Network.'' \textit{NeurIPS Deep Learning and Representation Learning Workshop}. arXiv:1503.02531.
+  \item Tian, Y., Krishnan, D., and Isola, P., 2020. ``Contrastive Representation Distillation.'' \textit{International Conference on Learning Representations (ICLR)}. arXiv:1910.10699.
+  \item Zhao, B., Cui, Q., Song, R., Qiu, Y., and Liang, J., 2022. ``Decoupled Knowledge Distillation.'' \textit{IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}. arXiv:2203.08679.
+  \item Chen, P., Liu, S., Zhao, H., and Jia, J., 2021. ``Distilling Knowledge via Knowledge Review.'' \textit{IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}. arXiv:2104.09044.
+  \item Romero, A., Ballas, N., Kahou, S. E., Chassang, A., Gatta, C., and Bengio, Y., 2015. ``FitNets: Hints for Thin Deep Nets.'' \textit{International Conference on Learning Representations (ICLR)}. arXiv:1412.6550.
+  \item Kornblith, S., Norouzi, M., Lee, H., and Hinton, G., 2019. ``Similarity of Neural Network Representations Revisited.'' \textit{International Conference on Machine Learning (ICML)}. arXiv:1905.00414.
+  \item Park, W., Kim, D., Lu, Y., and Cho, M., 2019. ``Relational Knowledge Distillation.'' \textit{IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}. arXiv:1904.05068.
+  \item He, K., Zhang, X., Ren, S., and Sun, J., 2016. ``Deep Residual Learning for Image Recognition.'' \textit{IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}. arXiv:1512.03385.
+  \item Sandler, M., Howard, A., Zhu, M., Zhmoginov, A., and Chen, L.-C., 2018. ``MobileNetV2: Inverted Residuals and Linear Bottlenecks.'' \textit{IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}. arXiv:1801.04381.
+  \item Touvron, H., Cord, M., Douze, M., Massa, F., Sablayrolles, A., and J\'egou, H., 2021. ``Training Data-Efficient Image Transformers \& Distillation Through Attention.'' \textit{International Conference on Machine Learning (ICML)}. arXiv:2012.12877.
+  \item Dosovitskiy, A., Beyer, L., Kolesnikov, A., Weissenborn, D., Zhai, X., Unterthiner, T., Dehghani, M., Minderer, M., Heigold, G., Gelly, S., Uszkoreit, J., and Houlsby, N., 2021. ``An Image Is Worth 16x16 Words: Transformers for Image Recognition at Scale.'' \textit{International Conference on Learning Representations (ICLR)}. arXiv:2010.11929.
+  \item Krizhevsky, A., 2009. ``Learning Multiple Layers of Features from Tiny Images.'' Technical Report, University of Toronto.
 \end{enumerate}
 
 \end{document}
