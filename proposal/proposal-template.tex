@@ -1,0 +1,224 @@
+\documentclass[11pt, letterpaper]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{parskip}
+\geometry{margin=1in}
+
+\definecolor{courseblue}{HTML}{002452}
+\definecolor{coursegold}{HTML}{FABD0F}
+\definecolor{coursered}{HTML}{B90E31}
+\definecolor{lightblue}{HTML}{E8EEF7}
+
+\hypersetup{colorlinks=true,linkcolor=courseblue,urlcolor=coursered}
+
+\tcbuselibrary{skins}
+\newtcolorbox{guidancebox}{enhanced,colback=lightblue,colframe=courseblue,
+  sharp corners,leftrule=4pt,left=6pt,right=6pt,top=4pt,bottom=4pt}
+
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{courseblue}{\textbf{CISC 473 --- Deep Learning | Fall 2026}}}
+\fancyhead[R]{\small\textcolor{courseblue}{Project Proposal}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\large\bfseries\color{courseblue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{courseblue}}{}{0em}{}
+
+%% ════════════════════════════════════════════════════════════════
+%% INSTRUCTIONS FOR STUDENTS
+%% Replace every [PLACEHOLDER] with your actual content.
+%% Delete all \guidancebox blocks before submitting.
+%% Submit as a compiled PDF + .tex source in a .zip archive.
+%% ════════════════════════════════════════════════════════════════
+
+\begin{document}
+
+{\centering
+  {\Large\textbf{CISC 473: Deep Learning --- Project Proposal}}\\[0.5em]
+  {\large\textit{P22: Cross-Architecture Knowledge Distillation}}\\[0.4em]
+  \textbf{Group Members:}\\{}
+  Lee Xuan \quad 20630324 \quad (Role: Engineering Lead)\\{}
+  Fong Yee Xin \quad [Student ID] \quad (Role: Engineering Lead)\\[0.3em]
+  \textbf{GitHub Repository:} \url{https://github.com/l33zard/cakd.git}\\[0.3em]
+  \textbf{Date:} \today\\[0.4em]
+  \rule{\linewidth}{0.4pt}
+}
+
+\section{Problem Statement and Motivation}
+
+\begin{guidancebox}
+\textbf{Guidance (delete before submitting).}
+Clearly define the problem you are solving. Explain \emph{why} it matters
+in a broader context. Reference 1--2 high-level papers or application areas.
+This section should answer: ``What problem are we addressing, and who cares?''
+Target: $\approx$300 words.
+\end{guidancebox}
+
+[WRITE YOUR PROBLEM STATEMENT HERE. Describe the task, why it is hard, and why
+it is important. Situate it within a research or application context.]
+
+Knowledge distillation is the process of compressing a large and more complex model, known as the teacher, into a smaller, simpler model, known as the student, and in the process of doing so, preserve much of the teacher's accuracy. This process is relevant in the current day and age for 3 different reasons. 
+
+Firstly, running a model for everyday users translates to companies needing to route billions of daily user queries through massive, energy-hungry data centers, an expensive process. Through distillation, the model can be shrunk such that they require significantly less computing power, minimising cloud hosting and electricity bills. 
+
+Secondly, there is currently a transition from cloud-based AI to AI systems that run directly on personal hardware. This would allow AI features to work instantly, offline and without uploading sensitive data to an external server. This is however limited by the strict memory and battery constraints that exist in smaller personal devices like smartphones, smartwatches, laptops and automotive computer chips. Knowledge distillation would compress state-of-the-art AI so that these personal devices could better handle AI systems directly. 
+
+Thirdly, knowledge distillation enables smaller student models to retain much of the predictive performance of larger teacher models while requiring less computation during inference. This can reduce inference latency and resource requirements, making distilled models more suitable for real-time and resource-constrained applications such as autonomous systems, robotics, and edge devices, fields that are increasingly adopting AI-driven systems. 
+
+However, knowledge distillation becomes more challenging when the teacher and student use different architectures. In particular, we look at the architecture gap between convolutional neural network (CNN) and vision transformer (ViT) as they learn and represent visual information differently, making the transfer of intermediate representations between them more complex. To be more specific, CNNs represent images through hierarchical spatial feature maps produced by convolutional operations, while ViTs represent images as sequences of patch tokens and model relationships between them using self-attention. As a result, their intermediate representations differ in structure, making direct feature-level knowledge transfer difficult. This project investigates different methods of knowledge distillation, benchmarked on CIFAR-100, and proposes an intermediate-feature alignment strategy for CNN-to-ViT knowledge distillation. 
+\section{Literature Survey}
+
+\begin{guidancebox}
+\textbf{Guidance (delete before submitting).}
+Summarise at least \textbf{5 related papers}. For each paper:
+(1) state the core idea in one sentence, (2) describe what it achieves,
+and (3) explain how your project relates to or differs from it.
+Avoid copying abstracts verbatim. Identify at least one open problem
+that motivates your proposed approach.
+\end{guidancebox}
+
+\subsection{Related Works}
+
+\paragraph{[Paper 1: Authors, Year, Venue.]}
+[One-paragraph summary: what they proposed, what benchmark they evaluated on,
+what metric they achieved, and how this relates to your project.]
+
+\paragraph{[Paper 2: Authors, Year, Venue.]}
+[Summary\ldots]
+
+\paragraph{[Paper 3: Authors, Year, Venue.]}
+[Summary\ldots]
+
+\paragraph{[Paper 4: Authors, Year, Venue.]}
+[Summary\ldots]
+
+\paragraph{[Paper 5: Authors, Year, Venue.]}
+[Summary\ldots]
+
+\subsection{Open Problem}
+
+\begin{guidancebox}
+\textbf{Guidance.} Identify a specific gap, limitation, or unexplored direction
+in the related work that motivates your novel contribution. Be precise.
+\end{guidancebox}
+
+[DESCRIBE THE OPEN PROBLEM OR GAP YOUR PROJECT WILL ADDRESS.]
+
+\section{Proposed Methodology}
+
+\begin{guidancebox}
+\textbf{Guidance.}
+Describe your approach in enough detail that it could be reproduced:
+(1) baseline model and dataset you will start with,
+(2) your proposed modification or extension and \emph{why} you chose it,
+(3) how you will evaluate success (metrics, baselines).
+Include a diagram if helpful. Target: $\approx$400 words.
+\end{guidancebox}
+
+\subsection{Baseline}
+
+[DESCRIBE THE BASELINE MODEL AND DATASET. Which existing code/checkpoint will
+you start from? Which metric will you use to evaluate the baseline?]
+
+\subsection{Proposed Extension}
+
+[DESCRIBE YOUR PROPOSED MODIFICATION OR EXTENSION. Why do you expect it to
+help? What is the key hypothesis you are testing?]
+
+\subsection{Evaluation Plan}
+
+[DESCRIBE YOUR EVALUATION PLAN:
+\begin{itemize}[noitemsep]
+  \item Dataset(s) and split(s) you will use
+  \item Metrics (e.g., PSNR/SSIM, ROUGE-L, F1, AUROC)
+  \item Baselines you will compare against
+  \item Number of seeds / runs for statistical reliability
+\end{itemize}]
+
+\subsection{Early Novel Contribution (Optional Bonus)}
+
+\begin{guidancebox}
+\textbf{Guidance.} If you have already identified a specific novel contribution
+(a gap in existing evaluations, an untested configuration, a new domain),
+describe it here for the +2 bonus points. Be concrete and specific.
+\end{guidancebox}
+
+[DESCRIBE YOUR NOVEL CONTRIBUTION IDEA, OR LEAVE THIS SECTION EMPTY.]
+
+\section{Project Timeline and Roles}
+
+\begin{guidancebox}
+\textbf{Guidance.} Provide a week-by-week plan. Assign each task to a named
+group member. The plan must be specific enough to hold yourselves accountable.
+\end{guidancebox}
+
+\begin{center}
+\begin{tabular}{lp{7cm}l}
+\toprule
+\textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
+\midrule
+1 & [Task, e.g., Finish reading all 4 core papers; repo setup] & [Name] \\
+2 & [Task] \textbf{(Proposal due)} & [Name] \\
+3 & [Task] & [Name] \\
+4 & [Task] & [Name] \\
+5 & [Task] & [Name] \\
+6 & [Task] \textbf{(Midterm due)} & [Name] \\
+7 & [Task] & [Name] \\
+8 & [Task] & [Name] \\
+9 & [Task] & [Name] \\
+10 & [Task] \textbf{(Final due)} & [Name] \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{lp{7cm}l}
+\toprule
+\textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
+\midrule
+1--2 & Paper reading; teacher model training (ResNet-110); \textbf{Proposal due} & Fong Yee Xin \\
+3 & Vanilla KD; temperature/weight ablation & Lee Xuan \\
+4 & CRD distillation; DKD distillation & Fong Yee Xin \\
+5 & Cross-architecture distillation: ResNet-50 $\rightarrow$ DeiT-Tiny & Lee Xuan \\
+6 & CKA analysis before/after distillation; \textbf{Midterm due} & Fong Yee Xin \\
+7 & Feature alignment for CNN $\rightarrow$ ViT case & Lee Xuan \\
+8 & Extended experiments; efficiency analysis (accuracy vs.\ FLOPs) & Fong Yee Xin \\
+9 & Report writing; accuracy table; CKA heatmaps & Lee Xuan \\
+10 & Final submission; \textbf{Final due} & Fong Yee Xin \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Contribution Declaration}
+
+\begin{tabular}{lcc}
+\toprule
+\textbf{Member} & \textbf{Primary Responsibilities} & \textbf{Estimated \%} \\
+\midrule
+{Lee Xuan} & Literature review, report writing, Data pipeline, evaluation code & 50\%  \\
+{Fong Yee Xin}& README, Model implementation, experiments & 50\%  \\
+\bottomrule
+\end{tabular}
+
+\section{References}
+
+\begin{guidancebox}
+\textbf{Guidance.} Use consistent citation formatting. Include at minimum the 5
+papers from Section~2, plus any other papers you reference.
+arXiv IDs and DOIs are preferred over URLs.
+\end{guidancebox}
+
+\begin{enumerate}[label={[\arabic*]},leftmargin=*]
+  \item [Author(s), Year. ``Title.'' \textit{Venue}. arXiv:XXXX.XXXXX or DOI.]
+  \item [Author(s), Year. ``Title.'' \textit{Venue}.]
+  \item [\ldots]
+\end{enumerate}
+
+\end{document}
