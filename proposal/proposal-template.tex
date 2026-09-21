@@ -86,17 +86,17 @@ that motivates your proposed approach.
 
 \subsection{Related Works}
 
-\paragraph{Decoupled Knowledge Distillation: Borui Zhao, Quan Cui, Renjie Song, Yiyu Qiu, Jiajun Liang, 2022, CVPR 2022.}
+\paragraph{[Decoupled Knowledge Distillation: Borui Zhao, Quan Cui, Renjie Song, Yiyu Qiu, Jiajun Liang, 2022, CVPR 2022.]}
 [One-paragraph summary: what they proposed, what benchmark they evaluated on,
 what metric they achieved, and how this relates to your project.]
 
-\paragraph{Contrastive Representation Distillation: Yonglong Tian, Dilip Krishnan, Phillip Isola, 2020, ICLR 2020.]}
+\paragraph{[Contrastive Representation Distillation: Yonglong Tian, Dilip Krishnan, Phillip Isola, 2020, ICLR 2020.]}
 [Summary\ldots]
 
-\paragraph{Distilling Knowledge via Knowledge Review: Pengguang Chen, Shu Liu, Hengshuang Zhao, Jiaya Jia, 2021, CVPR 2021.]}
+\paragraph{[Distilling Knowledge via Knowledge Review: Pengguang Chen, Shu Liu, Hengshuang Zhao, Jiaya Jia, 2021, CVPR 2021.]}
 [Summary\ldots]
 
-\paragraph{RepDistiller: Authors, Year, Venue.]}
+\paragraph{[Paper 4: Authors, Year, Venue.]}
 [Summary\ldots]
 
 \paragraph{[Paper 5: Authors, Year, Venue.]}
@@ -127,10 +127,17 @@ Include a diagram if helpful. Target: $\approx$400 words.
 [DESCRIBE THE BASELINE MODEL AND DATASET. Which existing code/checkpoint will
 you start from? Which metric will you use to evaluate the baseline?]
 
+We will use CIFAR-100 as the primary dataset for training and evaluating all models. We will first establish non-distilled performance by evaluating the teacher and student models using standard supervised training. For the main cross-architecture experiment, a ResNet-50 will be used as the CNN teacher and a DeiT-Tiny as the ViT student. The performance of the DeiT-Tiny trained without knowledge distillation will serve as the primary student baseline.
+We will then reproduce established knowledge distillation methods, including Vanilla Knowledge Distillation (KD), Contrastive Representation Distillation (CRD), and Decoupled Knowledge Distillation (DKD). These methods will provide additional baselines for determining whether our proposed cross-architecture feature-alignment method provides an improvement over existing distillation approaches. We will build upon existing official or publicly available implementations and pretrained checkpoints where appropriate. The primary evaluation metric will be top-1 classification accuracy on the CIFAR-100 test set, with computational cost measured using FLOPs.
+
 \subsection{Proposed Extension}
 
 [DESCRIBE YOUR PROPOSED MODIFICATION OR EXTENSION. Why do you expect it to
 help? What is the key hypothesis you are testing?]
+
+Our proposed extension focuses on improving the transfer of intermediate representations between a CNN teacher and a ViT student. Because these representations differ in both structure and dimensionality, they cannot be directly aligned for feature-level knowledge distillation.
+We propose an intermediate-feature alignment module that transforms the CNN teacher's feature maps into a representation compatible with the ViT student's patch-token representations. The CNN feature maps will first be converted from their spatial representation into a sequence of feature vectors. A learnable projection will then transform the CNN channel dimension to the ViT embedding dimension, while spatial pooling or interpolation can be used where necessary to align the number of teacher features with the number of student patch tokens. This enables a feature-level distillation loss to be computed between the aligned teacher and student representations.
+Our key hypothesis is that explicitly aligning the intermediate representations of the CNN teacher and ViT student will allow the student to learn additional information that is not captured solely by the teacher's output predictions, thereby improving cross-architecture knowledge distillation.
 
 \subsection{Evaluation Plan}
 
@@ -141,6 +148,10 @@ help? What is the key hypothesis you are testing?]
   \item Baselines you will compare against
   \item Number of seeds / runs for statistical reliability
 \end{itemize}]
+
+All experiments will use CIFAR-100 with consistent training, validation, and test splits across methods. We will compare the normally trained DeiT-Tiny student against Vanilla KD, CRD, DKD, and our proposed intermediate-feature alignment method using a ResNet-50 teacher.
+The primary metric will be top-1 classification accuracy, while FLOPs will be reported to evaluate computational efficiency. We will additionally use Centered Kernel Alignment (CKA) to measure the similarity between teacher and student intermediate representations before and after distillation. This will allow us to investigate whether our proposed method produces greater representational alignment between the CNN and ViT.
+We will perform ablation studies over the distillation temperature \(T \in \{1,2,4,8,16\}\) and the weights assigned to the different components of the distillation loss. Each main experiment will be conducted using at least three independent runs with fixed random seeds, and the resulting performance will be aggregated to improve statistical reliability.
 
 \subsection{Early Novel Contribution (Optional Bonus)}
 
@@ -164,34 +175,15 @@ group member. The plan must be specific enough to hold yourselves accountable.
 \toprule
 \textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
 \midrule
-1 & [Task, e.g., Finish reading all 4 core papers; repo setup] & [Name] \\
-2 & [Task] \textbf{(Proposal due)} & [Name] \\
-3 & [Task] & [Name] \\
-4 & [Task] & [Name] \\
-5 & [Task] & [Name] \\
-6 & [Task] \textbf{(Midterm due)} & [Name] \\
-7 & [Task] & [Name] \\
-8 & [Task] & [Name] \\
-9 & [Task] & [Name] \\
-10 & [Task] \textbf{(Final due)} & [Name] \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\begin{center}
-\begin{tabular}{lp{7cm}l}
-\toprule
-\textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
-\midrule
-1--2 & Paper reading; teacher model training (ResNet-110); \textbf{Proposal due} & Fong Yee Xin \\
-3 & Vanilla KD; temperature/weight ablation & Lee Xuan \\
-4 & CRD distillation; DKD distillation & Fong Yee Xin \\
-5 & Cross-architecture distillation: ResNet-50 $\rightarrow$ DeiT-Tiny & Lee Xuan \\
+1--2 & Literature review; CIFAR-100 pipeline; teacher and student baseline training (ResNet-110/MobileNetV2); \textbf{Proposal due} & Fong Yee Xin \\
+3 & Vanilla KD; temperature and distillation-weight ablations & Lee Xuan \\
+4 & CRD and DKD distillation baselines & Fong Yee Xin \\
+5 & ResNet-50 and DeiT-Tiny baselines; cross-architecture distillation: ResNet-50 $\rightarrow$ DeiT-Tiny & Lee Xuan \\
 6 & CKA analysis before/after distillation; \textbf{Midterm due} & Fong Yee Xin \\
-7 & Feature alignment for CNN $\rightarrow$ ViT case & Lee Xuan \\
-8 & Extended experiments; efficiency analysis (accuracy vs.\ FLOPs) & Fong Yee Xin \\
-9 & Report writing; accuracy table; CKA heatmaps & Lee Xuan \\
-10 & Final submission; \textbf{Final due} & Fong Yee Xin \\
+7 & Develop intermediate-feature alignment for CNN $\rightarrow$ ViT distillation & Lee Xuan \\
+8 & Extended experiments and ablations; efficiency analysis (accuracy vs.\ FLOPs) & Fong Yee Xin \\
+9 & Results analysis; accuracy tables; CKA heatmaps; report writing & Lee Xuan \\
+10 & Final report and reproducibility checks; \textbf{Final due} & Fong Yee Xin \\
 \bottomrule
 \end{tabular}
 \end{center}

@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1789952696.37669 "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" "proposal-template.pdf" "proposal-template" 1789952697.30254 0
+["pdflatex"] 1789955893.62386 "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" "proposal-template.pdf" "proposal-template" 1789955894.59103 0
   "C:/Users/leexu/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1789932022 80909 eab91d9745dd2edfd62a31d53cd5fe15 ""
   "C:/Users/leexu/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/tcrm1095.pk" 1789932025 12668 40d1c5b6297076e1680838d99039b48f ""
   "C:/Users/leexu/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1789931761 13333487 daf463df8f99abdef29e9a83cd6d2218 ""
@@ -28,6 +28,7 @@
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/tfm/public/cm/cmtt10.tfm" 1136765053 768 1321e9409b4137d6fb428ac9dc956269 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb" 1247596666 34811 78b52f49e893bcba91bd7581cdc144c0 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb" 1247596666 32080 340ef9bf63678554ee606688e7b5339d ""
+  "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb" 1247596667 36299 5f9df58c2139e7edcf37c8fca4bd384d ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1247596667 35752 024fb6c41858982481f6968b5fc26508 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1247596667 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb" 1247596667 37944 359e864bd06cde3b1cf57bb20757fb06 ""
@@ -160,10 +161,10 @@
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/tex/latex/trimspaces/trimspaces.sty" 1253169183 1380 971a51b00a14503ddf754cab24c3f209 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/leexu/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" 1789952694 10480 271085630b560a71dff3c8b29a377e1b ""
-  "proposal-template.aux" 1789952697 2471 55773c4410bbbe2a11c25d69051d1fbf "pdflatex"
-  "proposal-template.out" 1789952697 1854 eec9f6dc036a8da51785137c393eec44 "pdflatex"
-  "proposal-template.tex" 1789952694 10480 271085630b560a71dff3c8b29a377e1b ""
+  "c:/Users/leexu/GitHub/cakd/proposal/proposal-template.tex" 1789955892 13579 2bdd5b342f1f7479ae68b320ef80f2f6 ""
+  "proposal-template.aux" 1789955894 2471 e6edb9f6f588c4950cce4c40049ce6fa "pdflatex"
+  "proposal-template.out" 1789955894 1854 eec9f6dc036a8da51785137c393eec44 "pdflatex"
+  "proposal-template.tex" 1789955892 13579 2bdd5b342f1f7479ae68b320ef80f2f6 ""
   (generated)
   "proposal-template.aux"
   "proposal-template.log"
