@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.9.20)  20 SEP 2026 21:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.9.20)  20 SEP 2026 22:25
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -617,32 +617,32 @@ Underfull \hbox (badness 10000) in paragraph at lines 51--53
 [1{C:/Users/leexu/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}
 
 ] [2] [3]
-Underfull \hbox (badness 2495) in paragraph at lines 178--178
+Underfull \hbox (badness 2495) in paragraph at lines 181--181
 \OT1/cmr/m/n/10.95 teacher and stu-dent base-line train-ing
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 178--178
+Underfull \hbox (badness 10000) in paragraph at lines 181--181
 \OT1/cmr/m/n/10.95 (ResNet-110/MobileNetV2); \OT1/cmr/bx/n/10.95 Pro-posal
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 181--181
+Underfull \hbox (badness 10000) in paragraph at lines 184--184
 []\OT1/cmr/m/n/10.95 ResNet-50 and DeiT-Tiny base-lines;
  []
 
 
-Underfull \hbox (badness 2012) in paragraph at lines 182--182
+Underfull \hbox (badness 2012) in paragraph at lines 185--185
 []\OT1/cmr/m/n/10.95 CKA anal-y-sis be-fore/after dis-til-la-tion;
  []
 
 
-Underfull \hbox (badness 1910) in paragraph at lines 183--183
+Underfull \hbox (badness 1910) in paragraph at lines 186--186
 []\OT1/cmr/m/n/10.95 Develop intermediate-feature align-ment
  []
 
 
-Overfull \hbox (10.70242pt too wide) in paragraph at lines 193--201
+Overfull \hbox (10.70242pt too wide) in paragraph at lines 196--204
 [] 
  []
 
@@ -663,7 +663,7 @@ Here is how much of TeX's memory you used:
  1141 hyphenation exceptions out of 8191
  116i,13n,121p,1242b,879s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\leexu\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm1095.pk><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx12.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmti12.pfb><C:/Users/leexu/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on proposal-template.pdf (5 pages, 143224 bytes).
+Output written on proposal-template.pdf (5 pages, 143355 bytes).
 PDF statistics:
  128 PDF objects out of 1000 (max. 8388607)
  18 named destinations out of 1000 (max. 500000)
