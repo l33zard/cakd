@@ -1,0 +1,33 @@
+# Data and experiment outputs
+data/
+checkpoints/
+results/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# Environment variables and local secrets
+.env
+.env.*
+
+# VS Code and common editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# LaTeX temporary build files
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
