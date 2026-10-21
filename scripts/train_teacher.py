@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import math
 from itertools import islice
 from pathlib import Path
 
@@ -31,6 +33,17 @@ DEFAULT_SPLIT_SEED = 42
 DEFAULT_SMOKE_BATCHES = 1
 SMOKE_CHECKPOINT_PATH = Path("checkpoints/smoke_teacher.pt")
 SMOKE_METRICS_PATH = Path("results/smoke_teacher_metrics.csv")
+METRICS_FIELDNAMES = [
+    "epoch",
+    "learning_rate",
+    "train_loss",
+    "train_top1",
+    "train_top5",
+    "val_loss",
+    "val_top1",
+    "val_top5",
+    "checkpoint_saved",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -103,6 +116,12 @@ def parse_args() -> argparse.Namespace:
         help=f"Fixed CIFAR-100 train/validation split seed (default: {DEFAULT_SPLIT_SEED})",
     )
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        default=False,
+        help="Resume training from --checkpoint-path if it exists",
+    )
+    parser.add_argument(
         "--device",
         choices=("auto", "cpu", "cuda", "mps"),
         default="auto",
@@ -163,6 +182,16 @@ def _metrics_row(
     }
 
 
+def _prepare_metrics_csv(path: Path, *, resume: bool) -> None:
+    """Start fresh runs with one header while preserving resumed logs."""
+    if resume:
+        return
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as csv_file:
+        csv.DictWriter(csv_file, fieldnames=METRICS_FIELDNAMES).writeheader()
+
+
 def main() -> None:
     args = parse_args()
     if args.epochs <= 0:
@@ -173,6 +202,9 @@ def main() -> None:
     if args.smoke_test:
         args.checkpoint_path = SMOKE_CHECKPOINT_PATH
         args.metrics_path = SMOKE_METRICS_PATH
+        args.epochs = 1
+
+    _prepare_metrics_csv(args.metrics_path, resume=args.resume)
 
     set_seed(args.seed)
     device = _select_device(args.device)
@@ -199,10 +231,39 @@ def main() -> None:
         T_max=args.epochs,
     )
 
-    epochs_to_run = 1 if args.smoke_test else args.epochs
-    best_val_top1 = float("-inf")
+    if args.resume and Path(args.checkpoint_path).exists():
+        checkpoint = torch.load(args.checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        if checkpoint.get("optimizer_state_dict") is not None:
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        start_epoch = checkpoint.get("epoch", 0) + 1
+        best_val_top1 = checkpoint.get("best_val_top1", 0.0)
 
-    for epoch in range(1, epochs_to_run + 1):
+        # Epochs are one-based outside the loop: checkpoint epoch 1 resumes at
+        # start_epoch 2, while the loop uses zero-based index start_epoch - 1.
+        # Set the closed-form LR for that epoch without calling scheduler.step()
+        # before the first resumed optimizer.step().
+        scheduler.last_epoch = start_epoch - 1
+        eta_min = scheduler.eta_min
+        resumed_lrs = [
+            eta_min
+            + (base_lr - eta_min)
+            * (1.0 + math.cos(math.pi * start_epoch / scheduler.T_max))
+            / 2.0
+            for base_lr in scheduler.base_lrs
+        ]
+        for parameter_group, learning_rate in zip(optimizer.param_groups, resumed_lrs):
+            parameter_group["lr"] = learning_rate
+        scheduler._last_lr = resumed_lrs
+        scheduler._step_count = 0
+    else:
+        start_epoch = 1
+        best_val_top1 = 0.0
+
+    # Epoch indices are zero-based only inside the loop; CSV, checkpoints, and
+    # display output use one-based epoch numbers.
+    end_epoch = start_epoch if args.smoke_test else args.epochs
+    for epoch in range(start_epoch - 1, end_epoch):
         train_epoch_loader = train_loader
         validation_epoch_loader = validation_loader
         if args.smoke_test:
@@ -228,7 +289,7 @@ def main() -> None:
             path=args.checkpoint_path,
             model=model,
             optimizer=optimizer,
-            epoch=epoch,
+            epoch=epoch + 1,
             metrics=validation_metrics,
             best_val_top1=best_val_top1,
         )
@@ -237,15 +298,16 @@ def main() -> None:
         append_csv_row(
             args.metrics_path,
             _metrics_row(
-                epoch=epoch,
+                epoch=epoch + 1,
                 learning_rate=learning_rate,
                 train_metrics=train_metrics,
                 validation_metrics=validation_metrics,
                 checkpoint_saved=checkpoint_saved,
             ),
+            fieldnames=METRICS_FIELDNAMES,
         )
         print(
-            f"epoch {epoch}/{epochs_to_run} | "
+            f"epoch {epoch + 1}/{end_epoch} | "
             f"train loss {train_metrics.loss:.4f} | "
             f"train top1 {train_metrics.top1:.2f}% | "
             f"val loss {validation_metrics.loss:.4f} | "
