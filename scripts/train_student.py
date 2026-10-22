@@ -143,6 +143,12 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        default=False,
+        help="Resume training from --checkpoint-path if it exists",
+    )
+    parser.add_argument(
         "--smoke-batches",
         type=int,
         default=DEFAULT_SMOKE_BATCHES,
@@ -209,15 +215,23 @@ def _metrics_row(
     }
 
 
-def _prepare_metrics_csv(path: Path) -> None:
-    """Create a fresh metrics CSV with the stable experiment header."""
+def _prepare_metrics_csv(path: Path, *, resume: bool) -> None:
+    """Preserve an existing resumed log, otherwise create one fresh header."""
+    if resume and path.exists():
+        return
+
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as csv_file:
         csv.DictWriter(csv_file, fieldnames=METRICS_FIELDNAMES).writeheader()
 
 
-def _prepare_output_files(paths: list[Path], overwrite: bool) -> None:
+def _prepare_output_files(
+    paths: list[Path], *, overwrite: bool, resume: bool
+) -> None:
     """Refuse stale experiment outputs unless the user explicitly opts in."""
+    if resume:
+        return
+
     conflicts = [path for path in paths if path.exists()]
     if conflicts and not overwrite:
         conflict_text = "\n".join(f"  - {path}" for path in conflicts)
@@ -242,6 +256,8 @@ def _write_summary(path: Path, summary: dict[str, object]) -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.overwrite and args.resume:
+        raise ValueError("--overwrite and --resume are mutually exclusive")
     if args.epochs <= 0:
         raise ValueError("epochs must be positive")
     if args.warmup_epochs <= 0:
@@ -270,6 +286,7 @@ def main() -> None:
     _prepare_output_files(
         [checkpoint_path, metrics_path, summary_path],
         overwrite=args.overwrite,
+        resume=args.resume,
     )
 
     started_at = time.perf_counter()
@@ -279,7 +296,7 @@ def main() -> None:
     print(f"seed: {args.seed}")
     print(f"smoke test: {args.smoke_test}")
 
-    _prepare_metrics_csv(metrics_path)
+    _prepare_metrics_csv(metrics_path, resume=args.resume)
     train_loader, validation_loader, test_loader = get_cifar100_loaders(
         data_dir=args.data_dir,
         batch_size=args.batch_size,
@@ -300,9 +317,38 @@ def main() -> None:
         warmup_epochs=args.warmup_epochs,
     )
 
-    best_val_top1 = float("-inf")
-    epochs_to_run = 1 if args.smoke_test else args.epochs
-    for epoch in range(epochs_to_run):
+    if args.resume and checkpoint_path.exists():
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        if checkpoint.get("optimizer_state_dict") is not None:
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        start_epoch = checkpoint.get("epoch", 0) + 1
+        best_val_top1 = checkpoint.get("best_val_top1", 0.0)
+
+        # Epochs are one-based outside the loop. Set the scheduler state and
+        # current LR directly, avoiding scheduler.step() before training.
+        scheduler.last_epoch = start_epoch - 1
+        resumed_multiplier = scheduler.lr_lambdas[0](start_epoch)
+        resumed_lrs = [
+            base_lr * resumed_multiplier for base_lr in scheduler.base_lrs
+        ]
+        for parameter_group, learning_rate in zip(optimizer.param_groups, resumed_lrs):
+            parameter_group["lr"] = learning_rate
+        scheduler._last_lr = resumed_lrs
+        scheduler._step_count = 0
+    else:
+        if args.resume:
+            print(
+                f"Warning: checkpoint not found at {checkpoint_path}; "
+                "starting student training from epoch 1."
+            )
+        start_epoch = 1
+        best_val_top1 = 0.0
+
+    # Epoch indices are zero-based only inside the loop; CSV, checkpoints,
+    # and display output use one-based epoch numbers.
+    end_epoch = start_epoch if args.smoke_test else args.epochs
+    for epoch in range(start_epoch - 1, end_epoch):
         train_epoch_loader = train_loader
         validation_epoch_loader = validation_loader
         if args.smoke_test:
@@ -345,7 +391,7 @@ def main() -> None:
             fieldnames=METRICS_FIELDNAMES,
         )
         print(
-            f"epoch {epoch + 1}/{epochs_to_run} | "
+            f"epoch {epoch + 1}/{end_epoch} | "
             f"train loss {train_metrics.loss:.4f} | "
             f"train top1 {train_metrics.top1:.2f}% | "
             f"val loss {validation_metrics.loss:.4f} | "
@@ -354,8 +400,14 @@ def main() -> None:
         )
         scheduler.step()
 
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    if checkpoint_path.exists():
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+    else:
+        print(
+            f"No checkpoint found at {checkpoint_path}; "
+            "evaluating the current (final-epoch) model on the test set."
+        )
     test_loader_for_run = test_loader
     if args.smoke_test:
         test_loader_for_run = _limit_loader(test_loader, args.smoke_batches)

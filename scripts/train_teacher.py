@@ -316,8 +316,14 @@ def main() -> None:
         )
         scheduler.step()
 
-    checkpoint = torch.load(args.checkpoint_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    if Path(args.checkpoint_path).exists():
+        checkpoint = torch.load(args.checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+    else:
+        print(
+            f"No checkpoint found at {args.checkpoint_path}; "
+            "evaluating the current (final-epoch) model on the test set."
+        )
 
     test_loader_for_run = test_loader
     if args.smoke_test:
