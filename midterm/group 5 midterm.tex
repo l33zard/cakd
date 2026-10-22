@@ -1,0 +1,345 @@
+\documentclass[11pt, letterpaper]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{caption}
+\geometry{margin=1in}
+
+\definecolor{courseblue}{HTML}{002452}
+\definecolor{coursegold}{HTML}{FABD0F}
+\definecolor{coursered}{HTML}{B90E31}
+\definecolor{lightblue}{HTML}{E8EEF7}
+\definecolor{lightgold}{HTML}{FEF8E3}
+
+\hypersetup{colorlinks=true,linkcolor=courseblue,urlcolor=coursered}
+\tcbuselibrary{skins}
+\newtcolorbox{guidancebox}{enhanced,colback=lightblue,colframe=courseblue,
+  sharp corners,leftrule=4pt,left=6pt,right=6pt,top=4pt,bottom=4pt}
+\newtcolorbox{notebox}{enhanced,colback=lightgold,colframe=coursegold,
+  sharp corners,leftrule=4pt,left=6pt,right=6pt,top=4pt,bottom=4pt}
+
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{courseblue}{\textbf{CISC 473 --- Deep Learning | Fall 2026}}}
+\fancyhead[R]{\small\textcolor{courseblue}{Midterm Report}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\titleformat{\section}{\large\bfseries\color{courseblue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries\color{courseblue}}{}{0em}{}
+
+% Red placeholders mark content only the group can supply (results, decisions).
+\newcommand{\todo}[1]{\textcolor{coursered}{\textbf{[TODO: #1]}}}
+
+\begin{document}
+
+{\centering
+  {\Large\textbf{CISC 473: Deep Learning --- Midterm Report}}\\[0.5em]
+  {\large\textit{P22: Cross-Architecture Knowledge Distillation}}\\[0.4em]
+  \textbf{Group Members:}\\
+  Lee Xuan (Project Lead) \quad
+  Fong Yee Xin (Engineering Lead)\\[0.3em]
+  \textbf{GitHub:} \url{https://github.com/l33zard/cakd} \quad \textbf{Date:} \today\\[0.4em]
+  \rule{\linewidth}{0.4pt}
+}
+
+\section{Abstract}
+
+Knowledge distillation (KD) compresses a large teacher network into a compact
+student, but most feature-level KD methods assume teacher and student share an
+architectural family. We study the harder cross-architecture case of a
+convolutional ResNet-50 teacher and a DeiT-Tiny vision-transformer student on
+CIFAR-100, where spatial feature maps must be related to patch-token
+sequences. To date we have implemented a deterministic CIFAR-100 pipeline
+(45k/5k/10k train/validation/test split), CIFAR-adapted ResNet-50 and
+DeiT-Tiny models, a shared training and evaluation engine, and resumable
+training scripts for the teacher and for the from-scratch student baseline.
+The ResNet-50 teacher reaches \todo{X.X}\% top-1 test accuracy
+\todo{over N seeds}, compared with \todo{verify: 79.34}\% reported for the same
+architecture in [2,3], and the DeiT-Tiny student trained without a teacher
+reaches \todo{Y.Y}\%, which sets the lower bound that distillation must
+improve on. Next we will implement vanilla KD with temperature and weight
+ablations, measure layer-wise CKA between teacher and student, and add our
+proposed projected-feature alignment loss for the CNN-to-ViT setting.
+
+\section{Introduction and Problem Statement}
+
+Edge deployment favours small models, and vision transformers are increasingly
+the architecture of choice for compact students, yet the strongest teachers
+available for small-image tasks are often CNNs. Logit-only KD [1,3] transfers
+across architectures but discards the teacher's intermediate knowledge, while
+feature-level methods [2,4,5,7] were designed for CNN-to-CNN pairs whose
+feature maps are directly comparable. A CNN produces a $C\times H\times W$
+spatial map and a ViT produces an $N\times D$ token sequence, so feature
+transfer between them needs an explicit alignment step.
+
+\textbf{Research question.} \emph{Does aligning projected intermediate CNN
+features with ViT patch tokens, using a CKA-based loss, give a DeiT-Tiny
+student accuracy gains on CIFAR-100 beyond logit-only KD, at unchanged
+inference cost, and is any gain accompanied by higher teacher--student CKA
+similarity?}
+
+\textbf{Scope changes since the proposal.} \todo{Confirm the scope you are
+keeping. The repository README currently narrows the plan to ResNet-50
+$\rightarrow$ DeiT-Tiny with vanilla KD and projected-CKA alignment, and marks
+CRD, DKD, ReviewKD, the ResNet-110 $\rightarrow$ MobileNetV2 pair,
+TinyImageNet and attention-map alignment as out of scope. The P22 objectives
+and the final rubric ($\geq$2 baselines) still expect at least DKD or CRD, so
+either keep one of them or justify the change here.}
+
+\section{Related Work (Updated)}
+
+\textbf{Logit-based distillation.} Hinton et al.~[1] train the student to match
+the teacher's temperature-softened outputs, exposing the ``dark knowledge'' in
+non-target class probabilities. DKD~[3] shows that the classical loss couples
+non-target knowledge to the teacher's target confidence and decouples the two
+terms, matching feature-based methods at logit-only cost. Because they act only
+on output distributions, both transfer unchanged across architectures, which
+makes vanilla KD our base objective and DKD the strongest logit-only reference.
+
+\textbf{Feature-based distillation.} FitNets~[5] introduced intermediate
+``hints'' with a learnable regressor to reconcile channel widths; our projection
+module generalises this regressor from a channel mismatch to a map-versus-token
+mismatch. CRD~[2] maximises a contrastive bound on teacher--student mutual
+information over pooled embeddings, ReviewKD~[4] lets deeper student stages
+attend to shallower teacher stages, and RKD~[7] transfers pairwise distance and
+angle structure, which is insensitive to representation dimensionality. All
+were developed and evaluated almost entirely on CNN pairs.
+
+\textbf{Cross-architecture distillation.} DeiT~[10] trains a ViT student from a
+CNN teacher (RegNetY) through a dedicated distillation token and finds that a
+convolutional teacher outperforms a transformer teacher, suggesting the CNN's
+inductive bias is itself useful knowledge; however, it distils logits only and
+modifies the student architecture with an extra token. Liu et al.~[13] project
+CNN features into a transformer-like space with partially cross-attentive and
+group-wise linear projectors, and OFA-KD~[14] projects intermediate features of
+heterogeneous students into the logit space and distils there, reporting gains
+on CIFAR-100 and ImageNet across CNN, ViT and MLP pairs. Our approach differs in
+aligning token-level representations directly with a CKA objective [6], adding
+no tokens to the student, and using CKA as a diagnostic of where transfer
+succeeds. \todo{Verify the details and arXiv IDs of [13] and [14] against the
+papers before submitting.}
+
+\begin{center}
+\begin{tabular}{llp{4.2cm}p{4.2cm}}
+\toprule
+\textbf{Method} & \textbf{Year} & \textbf{Key idea} & \textbf{Relation to our work} \\
+\midrule
+Vanilla KD [1] & 2015 & Match temperature-softened logits & Base loss term; first baseline \\
+FitNets [5] & 2015 & $L_2$ hint loss with learnable regressor & Ancestor of our projection module \\
+CKA [6] & 2019 & Invariant similarity of representations & Diagnostic and alignment loss \\
+CRD [2] & 2020 & Contrastive teacher--student MI bound & Feature-level baseline (CNN pairs) \\
+ReviewKD [4] & 2021 & Cross-stage review of teacher features & Motivates layer-pair ablation \\
+DeiT [10] & 2021 & Distillation token, CNN teacher $\rightarrow$ ViT & Logit-only CNN$\rightarrow$ViT reference \\
+DKD [3] & 2022 & Decoupled target / non-target KD & Strongest logit-only baseline \\
+OFA-KD [14] & 2023 & Distil heterogeneous features in logit space & Closest cross-architecture competitor \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Methodology}
+
+\subsection{Model Architecture}
+
+\textbf{Teacher.} ResNet-50 [8] from \texttt{torchvision}, randomly initialised
+(no pre-trained weights). For $32\times32$ inputs the $7\times7$ stride-2 stem
+is replaced by a $3\times3$ stride-1 convolution, the initial max-pool is
+removed, and the classifier outputs 100 classes. The \texttt{layer3} output is
+a $1024\times8\times8$ map. Parameters: \todo{confirm with
+\texttt{python -m src.models}; $\approx$23.7M}.
+
+\textbf{Student.} DeiT-Tiny [10] from \texttt{timm}, randomly initialised, with
+the standard 192-dimensional embedding, 12 blocks and 3 heads, but with input
+size 32 and patch size 4. This gives an $8\times8$ grid of 64 patch tokens plus
+a class token (sequence $65\times192$). Parameters: \todo{confirm;
+$\approx$5.4M}.
+
+\textbf{Planned alignment module (not yet implemented).} The teacher's
+$8\times8$ \texttt{layer3} map already matches the student's token grid, so it is
+flattened to 64 vectors and projected $\mathbb{R}^{1024}\to\mathbb{R}^{192}$ by
+a learnable $1\times1$ convolution. The total student objective is
+\[
+\mathcal{L} = (1-\alpha)\,\mathcal{L}_{\text{CE}}
+            + \alpha\,\tau^{2}\,\mathrm{KL}\!\left(\sigma(z_T/\tau)\,\Vert\,\sigma(z_S/\tau)\right)
+            + \beta\,\bigl(1-\mathrm{CKA}(P(F_T),\,F_S)\bigr),
+\]
+where $P$ is the projection and $F_S$ the student's patch tokens at the chosen
+block. The projection is discarded after training, so inference cost is
+unchanged.
+
+\subsection{Training Setup}
+
+\begin{tabular}{lll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Teacher (ResNet-50)} & \textbf{Student (DeiT-Tiny, scratch)} \\
+\midrule
+Optimiser & SGD, momentum 0.9 & AdamW \\
+Learning rate & 0.1, cosine annealing & $3\times10^{-4}$, 5-epoch linear warm-up then cosine \\
+Weight decay & $5\times10^{-4}$ & 0.05 \\
+Batch size & 128 & 128 \\
+Epochs & 100 & 100 \\
+Loss function & Cross-entropy & Cross-entropy \\
+Data augmentation & Random crop (pad 4), horizontal flip & Same \\
+Random seeds used & 42 \todo{add seeds, e.g. 123, 999} & 42 \todo{add seeds} \\
+\bottomrule
+\end{tabular}
+
+The checkpoint with the best validation top-1 accuracy is kept and evaluated
+once on the test set. Training is resumable from that checkpoint, restoring
+model, optimiser and learning-rate schedule state.
+
+\subsection{Dataset and Preprocessing}
+
+CIFAR-100 [12]: 60{,}000 $32\times32$ colour images in 100 balanced classes.
+The official 50{,}000-image training set is split deterministically (split seed
+42) into 45{,}000 training and 5{,}000 validation images; the official
+10{,}000-image test set is used only for final evaluation. Images are
+normalised with per-channel CIFAR-100 mean and standard deviation; training
+images additionally receive a random $32\times32$ crop after 4-pixel padding
+and a random horizontal flip, while validation and test images are not
+augmented. Classes are balanced, so no re-weighting is applied.
+
+\textbf{Evaluation protocol.} Top-1 and top-5 accuracy on the test set, reported
+as mean $\pm$ std over 3 seeds, together with parameter count and training time.
+
+\section{Preliminary Results}
+
+\subsection{Baseline Reproduction}
+
+\begin{notebox}
+\textbf{Target:} Match the published number within 1--2\% before proceeding
+to your proposed modification.
+\end{notebox}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Top-1 (\%)} & \textbf{Top-5 (\%)} & \textbf{Params} \\
+\midrule
+ResNet-50 teacher, published [2,3] & \todo{verify: 79.34} & -- & \todo{} \\
+ResNet-50 teacher, ours & \todo{} $\pm$ \todo{} & \todo{} $\pm$ \todo{} & \todo{} \\
+DeiT-Tiny student, scratch (ours) & \todo{} $\pm$ \todo{} & \todo{} $\pm$ \todo{} & \todo{} \\
+DeiT-Tiny + vanilla KD (early) & \todo{if available} & \todo{} & \todo{} \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Preliminary results on CIFAR-100 test set. All results are
+mean $\pm$ std over \todo{3} seeds.}
+\end{center}
+
+\subsection{Qualitative Analysis}
+
+\begin{figure}[h]
+  \centering
+  % \includegraphics[width=0.8\linewidth]{figures/teacher_curves.png}
+  \fbox{\parbox{0.8\linewidth}{\centering\vspace{1.5cm}\todo{Plot from
+  teacher\_metrics.csv and student metrics: train loss and validation top-1 per
+  epoch. Remove duplicate epoch rows left by resumed runs first.}\vspace{1.5cm}}}
+  \caption{Training loss and validation top-1 accuracy per epoch for the
+  ResNet-50 teacher and the from-scratch DeiT-Tiny student on CIFAR-100.}
+  \label{fig:qual}
+\end{figure}
+
+\subsection{Discussion}
+
+\todo{Interpret your numbers. Points worth covering: (1) how close the teacher
+is to the published 79\%; (2) the size of the teacher--student gap, which is
+the headroom KD can recover; (3) how much faster or slower the ViT converges
+than the CNN, since ViTs trained from scratch on small datasets are known to
+underfit without a CNN's locality prior; (4) any overfitting seen as a gap
+between train and validation accuracy.}
+
+\section{Challenges and Adaptations}
+
+\textbf{Compute interruptions.} Training uses the Google Colab free tier, whose
+sessions end after roughly 12 hours or on inactivity, deleting anything stored
+on the runtime's local disk. We moved checkpoints and metric logs to Google
+Drive and added a \texttt{--resume} option that restores model, optimiser and
+learning-rate schedule from the last best checkpoint, which let the 100-epoch
+teacher run complete across several sessions.
+
+\textbf{Correct resumption.} An early version restarted the cosine schedule from
+the wrong epoch after a resume and mixed zero- and one-based epoch numbers; we
+fixed both so a resumed run follows the same learning-rate curve as an
+uninterrupted one. Because only the best checkpoint is saved, resuming can
+repeat a few epochs and append duplicate rows to the metrics log; these are
+removed before plotting.
+
+\textbf{Feature-shape compatibility.} Choosing patch size 4 for DeiT-Tiny gives
+an $8\times8$ token grid that matches ResNet-50's \texttt{layer3} map, so the
+alignment module needs no spatial interpolation for that layer pair. We verify
+these shapes with forward hooks in \texttt{src/models.py}.
+
+\textbf{Timeline.} \todo{State whether you are behind the proposal: the
+proposal scheduled vanilla KD (Week 3), CRD (Week 4), DKD and the
+cross-architecture setup (Week 5) and ReviewKD and CKA (Week 6). So far the
+teacher and scratch-student baselines are done. Explain why (Colab limits,
+repo rebuild) and the reduced or re-ordered plan below.}
+
+\textbf{Group size.} \todo{The guide requires groups of 3; explain or remove.}
+
+\subsection{Updated Week 7--10 Plan}
+
+\begin{tabular}{lp{8cm}l}
+\toprule
+\textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
+\midrule
+7 & Vanilla KD (ResNet-50 $\rightarrow$ DeiT-Tiny); $\tau \in \{1,2,4,8,16\}$ and $\alpha$ ablation; layer-wise CKA tooling & \todo{Name} \\
+8 & Projected-CKA alignment module; $\beta$ and layer-pair ablations; \todo{DKD baseline if kept} & \todo{Name} \\
+9 & 3-seed reruns of selected configurations; CKA heatmaps before/after KD; accuracy vs.\ FLOPs analysis & \todo{Name} \\
+10 & Final report, presentation, single-command reproduction and README \textbf{(Final due)} & All \\
+\bottomrule
+\end{tabular}
+
+\section{Preliminary Novel Contribution (Optional Bonus)}
+
+\todo{Leave empty unless you have evidence. A quick candidate: compute
+layer-wise CKA between the trained teacher and the scratch student and show
+which layers are already similar or dissimilar before any distillation, as a
+heatmap. That is a quantitative, not-yet-reported baseline for the CNN$\rightarrow$ViT
+CKA study.}
+
+\section{AI Tool Disclosure}
+
+\todo{Required by the course guide. List the AI tools used and for what, e.g.
+``Claude was used to draft the structure and wording of this report from our
+proposal and code, and for debugging help; all experiments, results and
+analysis are our own and were verified by us.'' Edit to match what you
+actually did.}
+
+\section{Contribution Declaration}
+
+\begin{tabular}{lp{9cm}c}
+\toprule
+\textbf{Member} & \textbf{Contributions (this period)} & \textbf{\%} \\
+\midrule
+Lee Xuan & \todo{e.g. Related-work update, teacher training runs, report writing} & \todo{}\% \\
+Fong Yee Xin & \todo{e.g. Data pipeline, models, training engine, resumable training scripts} & \todo{}\% \\
+\bottomrule
+\end{tabular}
+
+\section{References}
+
+\begin{enumerate}[label={[\arabic*]},leftmargin=*]
+  \item Hinton, G., Vinyals, O., and Dean, J., 2015. ``Distilling the Knowledge in a Neural Network.'' \textit{NeurIPS Deep Learning and Representation Learning Workshop}. arXiv:1503.02531.
+  \item Tian, Y., Krishnan, D., and Isola, P., 2020. ``Contrastive Representation Distillation.'' \textit{ICLR}. arXiv:1910.10699.
+  \item Zhao, B., Cui, Q., Song, R., Qiu, Y., and Liang, J., 2022. ``Decoupled Knowledge Distillation.'' \textit{CVPR}. arXiv:2203.08679.
+  \item Chen, P., Liu, S., Zhao, H., and Jia, J., 2021. ``Distilling Knowledge via Knowledge Review.'' \textit{CVPR}. arXiv:2104.09044.
+  \item Romero, A., Ballas, N., Kahou, S. E., Chassang, A., Gatta, C., and Bengio, Y., 2015. ``FitNets: Hints for Thin Deep Nets.'' \textit{ICLR}. arXiv:1412.6550.
+  \item Kornblith, S., Norouzi, M., Lee, H., and Hinton, G., 2019. ``Similarity of Neural Network Representations Revisited.'' \textit{ICML}. arXiv:1905.00414.
+  \item Park, W., Kim, D., Lu, Y., and Cho, M., 2019. ``Relational Knowledge Distillation.'' \textit{CVPR}. arXiv:1904.05068.
+  \item He, K., Zhang, X., Ren, S., and Sun, J., 2016. ``Deep Residual Learning for Image Recognition.'' \textit{CVPR}. arXiv:1512.03385.
+  \item Sandler, M., Howard, A., Zhu, M., Zhmoginov, A., and Chen, L.-C., 2018. ``MobileNetV2: Inverted Residuals and Linear Bottlenecks.'' \textit{CVPR}. arXiv:1801.04381.
+  \item Touvron, H., Cord, M., Douze, M., Massa, F., Sablayrolles, A., and J\'egou, H., 2021. ``Training Data-Efficient Image Transformers \& Distillation through Attention.'' \textit{ICML}. arXiv:2012.12877.
+  \item Dosovitskiy, A., et al., 2021. ``An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale.'' \textit{ICLR}. arXiv:2010.11929.
+  \item Krizhevsky, A., 2009. ``Learning Multiple Layers of Features from Tiny Images.'' Technical report, University of Toronto.
+  \item Liu, Y., Cao, J., Li, B., Hu, W., Ding, J., and Li, L., 2022. ``Cross-Architecture Knowledge Distillation.'' \textit{ACCV}. arXiv:2207.05273. \todo{verify}
+  \item Hao, Z., Guo, J., Han, K., Tang, Y., Hu, H., Wang, Y., and Xu, C., 2023. ``One-for-All: Bridge the Gap Between Heterogeneous Architectures in Knowledge Distillation.'' \textit{NeurIPS}. arXiv:2310.19444. \todo{verify}
+\end{enumerate}
+
+\end{document}
