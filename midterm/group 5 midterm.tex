@@ -11,6 +11,8 @@
 \usepackage{graphicx}
 \usepackage{parskip}
 \usepackage{caption}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
 \geometry{margin=1in}
 
 \definecolor{courseblue}{HTML}{002452}
@@ -60,11 +62,13 @@ sequences. To date we have implemented a deterministic CIFAR-100 pipeline
 (45k/5k/10k train/validation/test split), CIFAR-adapted ResNet-50 and
 DeiT-Tiny models, a shared training and evaluation engine, and resumable
 training scripts for the teacher and for the from-scratch student baseline.
-The ResNet-50 teacher reaches \todo{X.X}\% top-1 test accuracy
-\todo{over N seeds}, compared with \todo{verify: 79.34}\% reported for the same
-architecture in [2,3], and the DeiT-Tiny student trained without a teacher
-reaches \todo{Y.Y}\%, which sets the lower bound that distillation must
-improve on. Next we will implement vanilla KD with temperature and weight
+After 100 epochs the ResNet-50 teacher reaches 75.35\% top-1 and 93.47\%
+top-5 test accuracy (single seed), about 4 points below the 79.34\% reported
+for a ResNet-50 CIFAR-100 teacher in [2,3] under a longer 240-epoch schedule.
+The from-scratch DeiT-Tiny student has completed its first 4 of 100 epochs
+(25.24\% validation top-1, still in learning-rate warm-up), confirming that the
+student pipeline runs end to end; its full run sets the lower bound that
+distillation must improve on. Next we will implement vanilla KD with temperature and weight
 ablations, measure layer-wise CKA between teacher and student, and add our
 proposed projected-feature alignment loss for the CNN-to-ViT setting.
 
@@ -186,12 +190,14 @@ Batch size & 128 & 128 \\
 Epochs & 100 & 100 \\
 Loss function & Cross-entropy & Cross-entropy \\
 Data augmentation & Random crop (pad 4), horizontal flip & Same \\
-Random seeds used & 42 \todo{add seeds, e.g. 123, 999} & 42 \todo{add seeds} \\
+Random seeds used & 42 (123, 999 planned) & 42 (123, 999 planned) \\
 \bottomrule
 \end{tabular}
 
 The checkpoint with the best validation top-1 accuracy is kept and evaluated
-once on the test set. Training is resumable from that checkpoint, restoring
+once on the test set.
+The trained teacher checkpoint (\texttt{teacher\_best.pt}) and metric logs are
+available at \url{https://drive.google.com/drive/folders/1J2HeM9IKQTrtBiroXC0C_Mx8FZVZoYu9?usp=sharing}; see the repository README for usage. Training is resumable from that checkpoint, restoring
 model, optimiser and learning-rate schedule state.
 
 \subsection{Dataset and Preprocessing}
@@ -222,37 +228,64 @@ to your proposed modification.
 \toprule
 \textbf{Model} & \textbf{Top-1 (\%)} & \textbf{Top-5 (\%)} & \textbf{Params} \\
 \midrule
-ResNet-50 teacher, published [2,3] & \todo{verify: 79.34} & -- & \todo{} \\
-ResNet-50 teacher, ours & \todo{} $\pm$ \todo{} & \todo{} $\pm$ \todo{} & \todo{} \\
-DeiT-Tiny student, scratch (ours) & \todo{} $\pm$ \todo{} & \todo{} $\pm$ \todo{} & \todo{} \\
-DeiT-Tiny + vanilla KD (early) & \todo{if available} & \todo{} & \todo{} \\
+ResNet-50 teacher, published [2,3] & 79.34 \todo{verify} & -- & -- \\
+ResNet-50 teacher, ours (100 ep., test) & 75.35 & 93.47 & $\approx$23.7M \\
+DeiT-Tiny student, scratch (4/100 ep., val.) & 25.24$^\dagger$ & 57.12$^\dagger$ & $\approx$5.4M \\
 \bottomrule
 \end{tabular}
-\captionof{table}{Preliminary results on CIFAR-100 test set. All results are
-mean $\pm$ std over \todo{3} seeds.}
+\captionof{table}{Preliminary results on CIFAR-100. Our results are from a
+single seed (42); the remaining two seeds are scheduled for Weeks 7--8, after
+which we will report mean $\pm$ std. $^\dagger$Validation accuracy after 4 of
+100 epochs, not a final result. Parameter counts are approximate.}
 \end{center}
 
 \subsection{Qualitative Analysis}
 
 \begin{figure}[h]
   \centering
-  % \includegraphics[width=0.8\linewidth]{figures/teacher_curves.png}
-  \fbox{\parbox{0.8\linewidth}{\centering\vspace{1.5cm}\todo{Plot from
-  teacher\_metrics.csv and student metrics: train loss and validation top-1 per
-  epoch. Remove duplicate epoch rows left by resumed runs first.}\vspace{1.5cm}}}
-  \caption{Training loss and validation top-1 accuracy per epoch for the
-  ResNet-50 teacher and the from-scratch DeiT-Tiny student on CIFAR-100.}
+  \begin{tikzpicture}
+  \begin{axis}[width=0.85\linewidth,height=6.5cm,xlabel={Epoch},ylabel={Top-1 accuracy (\%)},
+    xmin=0,xmax=100,ymin=0,ymax=100,grid=major,legend pos=south east,legend style={font=\small}]
+\addplot[thick,color=courseblue] coordinates {(1,1.29) (2,3.30) (3,6.59) (4,10.12) (5,13.94) (6,17.97) (7,22.18) (8,26.18) (9,29.79) (10,33.46) (11,36.71) (12,39.64) (13,42.57) (14,44.73) (15,46.93) (16,48.57) (17,50.32) (18,52.42) (19,53.76) (20,54.82) (21,56.34) (22,56.88) (23,58.01) (24,58.93) (25,59.51) (26,60.58) (27,61.31) (28,62.39) (29,62.46) (30,63.32) (31,64.34) (32,64.48) (33,65.34) (34,66.09) (35,66.56) (36,67.24) (37,67.70) (38,68.41) (39,68.90) (40,69.60) (41,70.09) (42,70.63) (43,71.09) (44,71.57) (45,72.44) (46,73.31) (47,73.90) (48,74.52) (49,74.72) (50,75.46) (51,76.52) (52,76.65) (53,77.53) (54,78.44) (55,79.21) (56,79.72) (57,80.77) (58,81.57) (59,82.38) (60,82.93) (61,83.54) (62,85.08) (63,85.81) (64,86.57) (65,87.70) (66,88.62) (67,89.53) (68,90.34) (69,91.67) (70,92.40) (71,93.62) (72,94.51) (73,95.25) (74,96.21) (75,96.90) (76,97.54) (77,98.14) (78,98.51) (79,99.07) (80,99.32) (81,99.49) (82,99.68) (83,99.73) (84,99.80) (85,99.82) (86,99.87) (87,99.88) (88,99.88) (89,99.90) (90,99.90) (91,99.92) (92,99.92) (93,99.94) (94,99.94) (95,99.99) (96,99.98) (97,99.99) (98,100.00) (99,99.99) (100,100.00)};
+\addlegendentry{Teacher train}
+\addplot[thick,color=coursered] coordinates {(1,1.88) (2,5.14) (3,8.38) (4,11.38) (5,17.88) (6,21.40) (7,24.48) (8,27.42) (9,29.70) (10,32.42) (11,37.36) (12,37.86) (13,40.60) (14,43.14) (15,41.08) (16,42.62) (17,44.46) (18,47.20) (19,46.52) (20,46.98) (21,48.56) (22,48.52) (23,49.22) (24,53.28) (25,51.80) (26,48.84) (27,52.24) (28,51.92) (29,52.12) (30,54.90) (31,56.58) (32,54.66) (33,54.70) (34,55.66) (35,56.36) (36,56.92) (37,57.00) (38,56.78) (39,53.52) (40,56.74) (41,61.80) (42,57.94) (43,58.00) (44,57.38) (45,58.42) (46,61.88) (47,61.48) (48,61.78) (49,63.88) (50,61.82) (51,59.00) (52,63.82) (53,64.04) (54,62.58) (55,59.60) (56,62.48) (57,62.42) (58,62.98) (59,64.20) (60,64.30) (61,64.52) (62,63.30) (63,66.18) (64,64.82) (65,67.00) (66,66.44) (67,67.58) (68,66.32) (69,67.62) (70,67.22) (71,69.74) (72,69.78) (73,69.70) (74,70.92) (75,71.22) (76,72.28) (77,72.14) (78,73.10) (79,73.12) (80,73.86) (81,74.60) (82,74.40) (83,73.84) (84,74.46) (85,74.56) (86,74.68) (87,74.74) (88,74.88) (89,74.74) (90,74.90) (91,75.24) (92,75.36) (93,75.28) (94,75.48) (95,75.36) (96,75.22) (97,75.30) (98,75.28) (99,75.28) (100,75.40)};
+\addlegendentry{Teacher validation}
+\addplot[thick,color=coursegold,mark=*,mark size=1.5pt] coordinates {(1,10.30) (2,14.34) (3,18.76) (4,25.24)};
+\addlegendentry{Student validation (scratch)}
+  \end{axis}
+  \end{tikzpicture}
+  \caption{Top-1 accuracy per epoch on CIFAR-100. The ResNet-50 teacher's
+  training accuracy reaches $\approx$100\% while validation accuracy plateaus at
+  $\approx$75\% (best 75.48\% at epoch 94), showing a large generalisation gap.
+  The DeiT-Tiny student (4 epochs so far) is still in its 5-epoch learning-rate
+  warm-up.}
   \label{fig:qual}
 \end{figure}
 
 \subsection{Discussion}
 
-\todo{Interpret your numbers. Points worth covering: (1) how close the teacher
-is to the published 79\%; (2) the size of the teacher--student gap, which is
-the headroom KD can recover; (3) how much faster or slower the ViT converges
-than the CNN, since ViTs trained from scratch on small datasets are known to
-underfit without a CNN's locality prior; (4) any overfitting seen as a gap
-between train and validation accuracy.}
+\textbf{Teacher reproduction.} Our teacher reaches 75.35\% test top-1, about 4
+points below the 79.34\% commonly reported for ResNet-50 on CIFAR-100 [2,3],
+so it does not yet meet the 1--2\% reproduction target. The most likely cause
+is the training budget: the reference recipe trains for 240 epochs with
+step-decayed learning rate, whereas we used 100 epochs with cosine decay to fit
+free-tier GPU limits. A teacher about 4 points weaker is still far stronger than
+the student, so it remains usable for distillation, but we will note the gap
+when interpreting KD gains.
+
+\textbf{Overfitting.} Training accuracy reaches 99.99\% and training loss falls
+to 0.007, while validation accuracy plateaus near 75\% from about epoch 85
+onwards (Fig.~\ref{fig:qual}). The teacher has effectively memorised the
+45k-image training set with only crop and flip augmentation. Stronger
+regularisation (e.g.\ mixup or longer schedules) could narrow this gap, though
+we prioritise the distillation experiments over further tuning the teacher.
+
+\textbf{Student.} After 4 epochs the student reaches 25.24\% validation top-1
+and is improving by roughly 4--6 points per epoch, but these epochs fall inside
+the 5-epoch warm-up, so no conclusion about its final accuracy can be drawn yet.
+Vision transformers trained from scratch on small datasets are known to
+underperform CNNs because they lack a locality prior [10]; the size of the
+final teacher--student gap is the headroom that distillation must recover.
 
 \section{Challenges and Adaptations}
 
@@ -275,11 +308,15 @@ an $8\times8$ token grid that matches ResNet-50's \texttt{layer3} map, so the
 alignment module needs no spatial interpolation for that layer pair. We verify
 these shapes with forward hooks in \texttt{src/models.py}.
 
-\textbf{Timeline.} \todo{State whether you are behind the proposal: the
-proposal scheduled vanilla KD (Week 3), CRD (Week 4), DKD and the
-cross-architecture setup (Week 5) and ReviewKD and CKA (Week 6). So far the
-teacher and scratch-student baselines are done. Explain why (Colab limits,
-repo rebuild) and the reduced or re-ordered plan below.}
+\textbf{Timeline.} We are behind the proposal schedule, which placed vanilla
+KD in Week 3, CRD in Week 4, DKD in Week 5 and ReviewKD and CKA in Week 6. So
+far the data pipeline, both models, the shared training engine, the complete
+100-epoch teacher run and the first 4 epochs of the scratch student are done.
+The 100-epoch teacher alone consumed several free-tier GPU sessions, and the
+student run paused when the Colab quota was exhausted. We are moving
+remaining training to Kaggle (30 GPU-hours per week) in addition to Colab and
+re-ordering the plan below so the core CNN$\rightarrow$ViT comparison is
+completed first. \todo{Adjust if anything here is inaccurate.}
 
 \textbf{Group size.} \todo{The guide requires groups of 3; explain or remove.}
 
@@ -289,7 +326,7 @@ repo rebuild) and the reduced or re-ordered plan below.}
 \toprule
 \textbf{Week} & \textbf{Tasks} & \textbf{Responsible} \\
 \midrule
-7 & Vanilla KD (ResNet-50 $\rightarrow$ DeiT-Tiny); $\tau \in \{1,2,4,8,16\}$ and $\alpha$ ablation; layer-wise CKA tooling & \todo{Name} \\
+7 & Finish scratch student (100 epochs); vanilla KD (ResNet-50 $\rightarrow$ DeiT-Tiny); $\tau \in \{1,2,4,8,16\}$ and $\alpha$ ablation; layer-wise CKA tooling & \todo{Name} \\
 8 & Projected-CKA alignment module; $\beta$ and layer-pair ablations; \todo{DKD baseline if kept} & \todo{Name} \\
 9 & 3-seed reruns of selected configurations; CKA heatmaps before/after KD; accuracy vs.\ FLOPs analysis & \todo{Name} \\
 10 & Final report, presentation, single-command reproduction and README \textbf{(Final due)} & All \\

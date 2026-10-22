@@ -33,6 +33,20 @@ proposal/      Project proposal and its compiled PDF
 CRD, ReviewKD, DKD, TinyImageNet, the ResNet-110 -> MobileNetV2 pair, and
 attention-map alignment are currently out of scope.
 
+## Trained checkpoints
+
+Model checkpoints are too large for GitHub (over 100 MB) and are shared on
+Google Drive instead:
+
+**https://drive.google.com/drive/folders/1J2HeM9IKQTrtBiroXC0C_Mx8FZVZoYu9?usp=sharing**
+
+Download `teacher_best.pt` into `checkpoints/` so the path is
+`checkpoints/teacher_best.pt` (the default `--checkpoint-path` of
+`scripts/train_teacher.py`). To reproduce it from scratch instead, run
+`python scripts/train_teacher.py` (100 epochs, seed 42).
+
+CIFAR-100 is downloaded automatically by torchvision on first run.
+
 ## Environment setup
 
 Create and activate a virtual environment, then install the dependencies:
