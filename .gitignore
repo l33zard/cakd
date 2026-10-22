@@ -9,3 +9,15 @@
 *.fdb_latexmk
 *.bbl
 *.blg
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Project-generated outputs
+checkpoints/
+data/
+results/
