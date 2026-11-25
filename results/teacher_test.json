@@ -1,0 +1,6 @@
+{
+  "test_top1": 75.35,
+  "test_top5": 93.47,
+  "n_samples": 10000,
+  "checkpoint": "teacher_best.pt"
+}

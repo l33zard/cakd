@@ -1,0 +1,6 @@
+{
+  "test_top1": 61.91,
+  "test_top5": 85.87,
+  "n_samples": 10000,
+  "checkpoint": "kd_student_seed42_aligned_best.pt"
+}

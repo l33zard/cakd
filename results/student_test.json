@@ -1,0 +1,6 @@
+{
+  "test_top1": 55.05,
+  "test_top5": 78.52,
+  "n_samples": 10000,
+  "checkpoint": "student_seed42_best.pt"
+}

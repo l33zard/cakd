@@ -1,4 +1,4 @@
-﻿# LaTeX build artifacts
+# LaTeX build artifacts
 *.aux
 *.log
 *.out
@@ -20,7 +20,6 @@ __pycache__/
 # Project-generated outputs
 checkpoints/
 data/
-results/
 
 # LaTeX build artifacts
 final/*.aux
@@ -30,3 +29,6 @@ final/*.fls
 final/*.fdb_latexmk
 final/*.synctex.gz
 *.toc
+# Keep final test-set results
+results/*
+!results/*_test.json
