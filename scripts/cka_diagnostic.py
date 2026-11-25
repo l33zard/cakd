@@ -19,6 +19,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--teacher-checkpoint", type=Path, required=True)
     parser.add_argument("--aligned-checkpoint", type=Path, required=True)
+    parser.add_argument("--unaligned-student-checkpoint", type=Path, default=None,
+                        help="Overwrite alignment.student with a plain (unaligned) "
+                             "student state dict after loading the aligned checkpoint.")
+    parser.add_argument("--output-json", type=Path, default=None)
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--n-samples", type=int, default=512)
     parser.add_argument("--batch-size", type=int, default=64)
@@ -47,6 +51,17 @@ def main() -> None:
         # Strict loading restores teacher.*, student.*, and projection.* together.
         # The frozen teacher stored in the aligned checkpoint is authoritative.
         alignment.load_state_dict(_load_state(args.aligned_checkpoint))
+        if args.unaligned_student_checkpoint is not None:
+            sd = _load_state(args.unaligned_student_checkpoint)
+            sd = {k.removeprefix("student.").removeprefix("module."): v
+                  for k, v in sd.items()}
+            missing, unexpected = alignment.student.load_state_dict(sd, strict=False)
+            if missing or unexpected:
+                raise RuntimeError(
+                    f"unaligned student load mismatch — "
+                    f"missing={missing[:5]} unexpected={unexpected[:5]}")
+            print(f"Overwrote alignment.student with "
+                  f"{args.unaligned_student_checkpoint.name}")
         alignment.to(device).eval().requires_grad_(False)
 
         train_loader, validation_loader, test_loader = get_cifar100_loaders(
@@ -95,6 +110,20 @@ def main() -> None:
         raw = torch.tensor(raw_scores, dtype=torch.float64)
         projected = torch.tensor(projected_scores, dtype=torch.float64)
 
+        if args.output_json is not None:
+            import json
+            args.output_json.write_text(json.dumps({
+                "raw_pooled": raw_pooled,
+                "projected_pooled": projected_pooled,
+                "raw_batch_mean": float(raw.mean()),
+                "raw_batch_std": float(raw.std(correction=0)),
+                "projected_batch_mean": float(projected.mean()),
+                "projected_batch_std": float(projected.std(correction=0)),
+                "effective_rank": int(rank),
+                "n_samples": args.n_samples,
+                "student_checkpoint": (args.unaligned_student_checkpoint
+                                       or args.aligned_checkpoint).name,
+            }, indent=2))
         print(f"Raw pooled CKA:           {raw_pooled:.4f}")
         print(f"Projected pooled CKA:     {projected_pooled:.4f}")
         # Population standard deviation over the evaluated batches (also valid for one).
