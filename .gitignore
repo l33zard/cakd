@@ -21,3 +21,12 @@ __pycache__/
 checkpoints/
 data/
 results/
+
+# LaTeX build artifacts
+final/*.aux
+final/*.log
+final/*.out
+final/*.fls
+final/*.fdb_latexmk
+final/*.synctex.gz
+*.toc
