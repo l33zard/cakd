@@ -1,60 +1,56 @@
-# CISC 473 Deep Learning: Cross-Architecture Knowledge Distillation
+﻿# CISC 473 Deep Learning: Cross-Architecture Knowledge Distillation
 
-This repository contains the implementation for the CISC 473 project on
-cross-architecture knowledge distillation:
+Reproduction code for P22 — ResNet-50 teacher -> DeiT-Tiny student on
+CIFAR-100, with CKA-based projected feature alignment.
 
-**ResNet-50 teacher -> DeiT-Tiny student on CIFAR-100**
+## Quickstart
 
-The primary experiment will compare vanilla logit-only knowledge distillation
-with a projected intermediate-feature alignment loss.  The current repository
-is only a basic scaffold; model and training code will be added incrementally.
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r requirements.txt
+    python -c "from torchvision.datasets import CIFAR100; CIFAR100(root='data', download=True)"
+
+Download the four checkpoints from Google Drive:
+https://drive.google.com/drive/folders/1J2HeM9IKQTrtBiroXC0C_Mx8FZVZoYu9
+
+Place them in `checkpoints/`:
+    teacher_best.pt
+    student_seed42_best.pt
+    kd_student_seed42_best.pt
+    kd_student_seed42_aligned_best.pt
+
+## Reproduce main results (Section 4.2)
+
+    python -m scripts.evaluate_test --checkpoint checkpoints/teacher_best.pt --data-dir data --split-seed 42 --arch teacher --output-json results/teacher_test.json
+    python -m scripts.evaluate_test --checkpoint checkpoints/student_seed42_best.pt --data-dir data --split-seed 42 --arch student --output-json results/student_test.json
+    python -m scripts.evaluate_test --checkpoint checkpoints/kd_student_seed42_best.pt --data-dir data --split-seed 42 --arch student --output-json results/kd_student_test.json
+    python -m scripts.evaluate_test --checkpoint checkpoints/kd_student_seed42_aligned_best.pt --data-dir data --split-seed 42 --arch aligned --output-json results/kd_student_aligned_test.json
+
+Expected test top-1: 75.35 / 55.05 / 61.55 / 61.91.
+
+## Reproduce CKA before/after (Section 4.6)
+
+    python -m scripts.cka_diagnostic --teacher-checkpoint checkpoints/teacher_best.pt --aligned-checkpoint checkpoints/kd_student_seed42_aligned_best.pt --unaligned-student-checkpoint checkpoints/kd_student_seed42_best.pt --data-dir data --n-samples 512 --split-seed 42 --device cpu --output-json results/cka_before.json
+
+    python -m scripts.cka_diagnostic --teacher-checkpoint checkpoints/teacher_best.pt --aligned-checkpoint checkpoints/kd_student_seed42_aligned_best.pt --data-dir data --n-samples 512 --split-seed 42 --device cpu --output-json results/cka_after.json
+
+Expected: raw CKA 0.269 -> 0.260, projected CKA 0.348 -> 0.839.
+
+## Reproduce analysis figures (Sections 4.4, 4.5, Appendix A.2)
+
+    python scripts/confusion_matrix.py
+    python scripts/tsne_features.py
+    python scripts/plot_teacher_training.py
 
 ## Repository layout
 
-```text
-configs/       Experiment configuration files
-src/           Shared Python package code
-scripts/       Later command-line experiment scripts
-results/       Locally generated metrics and analysis outputs
-checkpoints/   Locally generated model checkpoints
-proposal/      Project proposal and its compiled PDF
-```
+    scripts/     Training, evaluation, and analysis entry points
+    src/         Shared Python package code (models, data, CKA, alignment)
+    results/     Generated metrics and figures
+    checkpoints/ Model checkpoints (downloaded from Google Drive)
+    final/       Final report LaTeX source and compiled PDF
 
-## Planned progression
+## Notes
 
-1. CIFAR-100 data pipeline
-2. ResNet-50 teacher
-3. DeiT-Tiny student trained from scratch
-4. Vanilla knowledge distillation
-5. CKA measurement
-6. Projected CKA feature alignment
-7. Focused layer-pair and loss-weight ablations
-
-CRD, ReviewKD, DKD, TinyImageNet, the ResNet-110 -> MobileNetV2 pair, and
-attention-map alignment are currently out of scope.
-
-## Trained checkpoints
-
-Model checkpoints are too large for GitHub (over 100 MB) and are shared on
-Google Drive instead:
-
-**https://drive.google.com/drive/folders/1J2HeM9IKQTrtBiroXC0C_Mx8FZVZoYu9?usp=sharing**
-
-Download `teacher_best.pt` into `checkpoints/` so the path is
-`checkpoints/teacher_best.pt` (the default `--checkpoint-path` of
-`scripts/train_teacher.py`). To reproduce it from scratch instead, run
-`python scripts/train_teacher.py` (100 epochs, seed 42).
-
-CIFAR-100 is downloaded automatically by torchvision on first run.
-
-## Environment setup
-
-Create and activate a virtual environment, then install the dependencies:
-
-```bash
-python -m venv .venv
-python -m pip install -r requirements.txt
-```
-
-No training or model entry points exist yet.  They will be documented here as
-they are added.
+- All results are single-seed (42); see the report's Limitations section.
+- Hardware: Google Colab free CPU tier (T4 unavailable for the runs reported).

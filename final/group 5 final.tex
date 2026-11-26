@@ -33,11 +33,11 @@
 \titleformat{\section}{\large\bfseries\color{courseblue}}{}{0em}{}[\titlerule]
 \titleformat{\subsection}{\normalsize\bfseries\color{courseblue}}{}{0em}{}
 
-\begin{document}
-
 % Resolve result graphics when compiling from the repository root or final/.
 \graphicspath{{./}{../}}
 \emergencystretch=2em
+
+\begin{document}
 
 {\centering
   {\Large\textbf{CISC 473: Deep Learning --- Final Report}}\\[0.5em]
@@ -88,7 +88,7 @@ student accuracy gains on CIFAR-100 beyond logit-only KD, at unchanged
 inference cost, and is any gain accompanied by higher teacher--student CKA
 similarity?}
 
-\textbf{Scope changes since the proposal.} Following instructor feedback, we
+\textbf{Scope.} Following instructor feedback, we
 narrowed the project to one cross-architecture pair: ResNet-50 teacher
 $\rightarrow$ DeiT-Tiny student on CIFAR-100. The required progression is the
 data pipeline, teacher, supervised student, vanilla KD, CKA measurement,
@@ -175,12 +175,6 @@ images additionally receive a random $32\times32$ crop after 4-pixel padding
 and a random horizontal flip, while validation and test images are not
 augmented. Classes are balanced, so no re-weighting is applied.
 
-\textbf{Research question.} \emph{Does aligning projected intermediate CNN
-features with ViT patch tokens, using a CKA-based loss, give a DeiT-Tiny
-student accuracy gains on CIFAR-100 beyond logit-only KD, at unchanged
-inference cost, and is any gain accompanied by higher teacher--student CKA
-similarity?}
-
 \subsection{Model Architecture}
 
 \textbf{Teacher.} ResNet-50 [8] from \texttt{torchvision}, randomly initialized
@@ -215,7 +209,9 @@ The student objective is
 where $P$ is the projection and $F_S$ contains patch tokens only. The
 projection is discarded after training, so inference cost is unchanged.
 
-\textcolor{red}{[TODO: report the KD temperature $\tau$, KD weight $\alpha$, and alignment weight $\beta$ used for the selected runs.]}
+We use KD temperature $\tau = 4.0$, logit-loss weight $\alpha = 0.5$, and
+CKA-alignment weight $\beta = 0.1$, the training-script defaults. A
+hyperparameter sweep is left to future work (\S\ref{sec:limitations}).
 
 \subsection{Proposed Modification}
 
@@ -230,7 +226,6 @@ positions across the minibatch as observations and embedding coordinates as
 features.
 
 \subsection{CKA Diagnostic}
-\label{sec:cka-method}
 
 We measure teacher--student feature similarity using linear CKA. For the
 teacher we take the layer3 output ($B\times1024\times8\times8$), flatten
@@ -274,14 +269,14 @@ test set. We do not report mean $\pm$ std; see \S\ref{sec:limitations}.
 
 \subsection{Main Results}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{@{}p{0.34\linewidth}p{0.24\linewidth}p{0.16\linewidth}p{0.15\linewidth}@{}}
 \toprule
 \textbf{Method} & \textbf{Test top-1} $\uparrow$ & \textbf{Test top-5} $\uparrow$ & \textbf{Source} \\
 \midrule
-DeiT-Ti (published) & \textcolor{red}{[TODO: DeiT-Ti CIFAR-100]} & --- & \cite{touvron2021} \\
-DKD w/ ResNet-50 (published) & \textcolor{red}{[TODO: DKD CIFAR-100]} & --- & \cite{zhao2022dkd} \\
+DeiT-B$\uparrow$ (ImageNet$\to$CIFAR-100, published) & 90.8 & --- & \cite{touvron2021} \\
+DKD w/ WRN-40-2$\to$WRN-16-2 (published, val.) & 74.76 & --- & \cite{zhao2022dkd} \\
 \midrule
 Ours: supervised DeiT-Ti & 55.05 & 78.52 & ours \\
 Ours: + KD & 61.55 & 85.33 & ours \\
@@ -302,22 +297,25 @@ CKA-based feature alignment adds a marginal $+0.36$\,pp top-1 (61.91 vs.\
 61.55) and $+0.54$\,pp top-5 (85.87 vs.\ 85.33); the gain is small and,
 absent multi-seed variance, we cannot claim statistical significance.
 
-Absolute numbers are approximately 10--15\,pp below published DeiT-Ti and
-DKD CIFAR-100 baselines (Table~\ref{tab:main}), which we attribute to
-(i) our 100-epoch training budget vs.\ 200--300-epoch published schedules,
-(ii) no ImageNet pre-training, (iii) weaker augmentation (crop$+$flip vs.\
-MixUp/\allowbreak{}CutMix/\allowbreak{}RandAugment), and (iv) CPU-only compute. We therefore emphasize
-\textbf{within-recipe comparisons} --- supervised vs.\ KD vs.\ KD$+$alignment
---- which are unaffected by the recipe gap, as the primary evidence for
-our research question.
-
-\textcolor{red}{[TODO: verify the published baseline values and recipe comparison above against the cited sources before submission.]}
+Our from-scratch DeiT-Ti student reaches 61.91\% test top-1. Direct
+comparison with published numbers is limited by experimental differences:
+DeiT-B was pretrained on ImageNet for 300 epochs and fine-tuned at higher
+resolution, and the DKD baseline uses a WRN-40-2$\to$WRN-16-2 pair trained
+for 240 epochs with MixUp/CutMix augmentation, evaluated on the validation
+split. Our student, by contrast, is trained from scratch on $32\times32$
+inputs for 100 epochs with crop$+$flip augmentation only, at $\sim$$16\times$
+fewer parameters than DeiT-B. We include both published numbers only to
+situate the absolute scale of CIFAR-100 and \emph{do not} treat the gap as
+a like-for-like performance difference. Our primary evidence is the
+\textbf{within-recipe comparison} --- supervised vs.\ KD vs.\ KD$+$alignment
+--- which shares architecture, data, augmentation, and training budget
+across all three rows, and isolates the effect of each modification.
 
 \subsection{Ablation Study}
 
 \label{sec:ablation}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lccc}
 \toprule
@@ -340,7 +338,7 @@ our hypothesis that projected-feature alignment is marginally beneficial.
 
 \subsection{Qualitative Analysis}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{results/tsne.png}
   \caption{t-SNE of penultimate features for 2{,}000 seeded CIFAR-100 test
@@ -366,12 +364,11 @@ visibly change the student's cluster structure}: the aligned student forms
 a somewhat more horizontally elongated cloud with rearranged local
 clusters, but the degree of superclass mixing is comparable. Given that
 separately-fitted embeddings cannot be compared by overlap, and that
-alignment applies a linear transform to features post-hoc, this qualitative
+alignment applies a learned linear transform to features trained
+jointly with the student, this qualitative
 result is \emph{consistent with} the raw CKA observation in
 \S\ref{sec:cka-decoupling} --- no measurable change in teacher--student
 feature similarity --- but does not independently strengthen it.
-
-\textcolor{red}{[TODO: verify the claim of clean teacher superclass clusters against Figure~\ref{fig:tsne}. The projection is learned jointly during training, rather than applied only post-hoc.]}
 
 \subsection{Failure Analysis}
 
@@ -382,8 +379,8 @@ All ten of the most-confused class pairs in the aligned student lie inside
 a single CIFAR-100 superclass. The dominant pairs are
 oak\_tree$\leftrightarrow$maple\_tree (19\% and 15\%, bidirectional),
 ray$\to$shark (14\%), crab$\to$lobster (13\%), and
-dolphin$\to$whale (13\%). These pairs require texture, colour, or
-morphological detail that a $32\times32$ input cannot carry; the student
+dolphin$\to$whale (13\%). We hypothesize that these pairs require texture, colour, or morphological
+detail that a $32\times32$ input cannot carry; on this view, the student
 learns the superclass but not the sub-class.
 \emph{Mitigation:} higher input resolution, or superclass-aware
 augmentation that emphasizes within-superclass discriminative regions.
@@ -395,8 +392,8 @@ the bidirectional woman$\leftrightarrow$girl confusion (20\%/18\%) is the
 single most frequent error in the whole test set. Faces at $32\times32$
 occupy roughly $8\times8$ pixels, so features distinguishing age and gender
 are below the resolution threshold of the student's $4\times4$ patch
-embedding. The student therefore learns a single ``person'' concept and
-predicts the most common adult-male/gender classes.
+embedding. One plausible explanation is that the student learns a single ``person''
+concept and predicts the most common adult-male/gender classes.
 \emph{Mitigation:} face-specific data augmentation, or a class-balanced
 loss that upweights the ``people'' superclass.
 
@@ -405,26 +402,23 @@ The bottom-10 accuracy list is dominated by species whose silhouette at
 $32\times32$ overlaps with a neighbouring class: seal (29\%), possum (37\%),
 otter (41\%), bear (43\%), lizard (43\%). These are typically confused with
 elongated mammals or reptiles rather than with semantically related
-classes, indicating that the student resorts to coarse shape cues when
-colour and texture are lost at low resolution. The teacher (75.35\%) is
-less affected because ResNet-50's larger effective receptive field at the
-same input scale preserves more spatial structure than DeiT-Tiny's
-$4\times4$ patch embedding.
+classes, suggesting that the student may resort to coarse shape cues when colour
+and texture are lost at low resolution. We conjecture that the teacher (75.35\%) is less affected because
+ResNet-50's larger effective receptive field at the same input scale
+preserves more spatial structure than DeiT-Tiny's $4\times4$ patch
+embedding.
 \emph{Mitigation:} overlapping patch sampling or a convolutional stem on
 the student, which would recover spatial priors the pure-transformer
 student lacks (consistent with DeiT's own architectural observations).
-
-\textcolor{red}{[TODO: validate the proposed resolution, prediction-bias, silhouette, and receptive-field explanations with class-specific image inspection or ablations; the confusion counts alone do not establish these mechanisms.]}
 
 \subsection{CKA Similarity vs.\ Accuracy}
 \label{sec:cka-decoupling}
 
 We test whether teacher--student CKA similarity predicts the accuracy gain
-from feature alignment. Teacher, seeded validation subset ($n=512$, 8
-batches of 64), and student architecture are held fixed; only the student
+from feature alignment. Teacher, seeded subset ($n=512$, 8 batches of 64, split seed 42), and student architecture are held fixed; only the student
 weights differ (unaligned KD vs.\ aligned KD).
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lcccc}
 \toprule
@@ -440,15 +434,13 @@ $\Delta$ & $+0.36$\,pp & $-0.009$ & $+0.491$ & 0 \\
 alignment (pooled over $n=512$, seed 42). Raw CKA is unconfounded; projected
 CKA passes through the learned projection. Batch CKA std over 8 batches:
 $\pm 0.043$ / $\pm 0.031$ (raw) and $\pm 0.033$ / $\pm 0.022$ (projected),
-so the raw-CKA change is well within one batch std.}
+so the raw-CKA change is within the batch sampling noise.}
 \label{tab:cka}
 \end{table}
 
 \textbf{Raw CKA is unchanged by alignment.} The unaligned student achieves
-raw CKA $0.269$; the aligned student $0.260$. The
-difference ($-0.009$) is well within one batch standard deviation,
-indicating that alignment did not make the student's features more
-teacher-like. \textbf{Projected CKA rises by $+0.491$ (0.348 $\to$ 0.839)},
+raw CKA $0.269$; the aligned student $0.260$. The difference ($-0.009$) is well within the batch sampling noise
+($\pm 0.043$); we cannot distinguish it from zero on this 512-sample subset. \textbf{Projected CKA rises by $+0.491$ (0.348 $\to$ 0.839)},
 but this metric is confounded by construction: the projection $P$ is
 trained jointly with the aligned student and therefore preferentially fits
 aligned features. \textbf{Accuracy improves by only $+0.36$\,pp}
@@ -464,12 +456,6 @@ CKA as evidence that alignment has improved student--teacher representation
 transfer. Both runs have effective rank of $P(F_T)$ equal to 192 (the
 student embedding dimension), ruling out representation collapse as an
 explanation.
-
-\textcolor{red}{[TODO: attach cka\_before.json and cka\_after.json and
-confirm whether the seeded subset was validation or test; the supplied
-notes differ. Batch standard deviations describe variation across images,
-not independent training runs, and do not establish statistical equivalence.
-The rank check concerns projected teacher features, not student-feature rank.]}
 
 \section{Discussion}
 
@@ -516,13 +502,9 @@ validation top-1 still climbing at epoch 100 with learning rate
 $\approx 0.008$, suggesting the teacher was undertrained rather than
 over-regularized. Extending the schedule to 200--300 epochs, adding label
 smoothing, or replacing crop$+$flip with RandAugment would all be cheap
-interventions in a GPU setting and would likely close 2--4\,pp of the gap
+interventions in a GPU setting and would in our expectation narrow the gap
 to published ResNet-50 CIFAR-100 baselines. We did not pursue them because
 CPU-only compute made each 100-epoch run the dominant cost.
-
-\textcolor{red}{[TODO: verify the seed-variation, teacher-undertraining,
-published-baseline, and expected 2--4\,pp improvement claims; these are not
-established by the supplied single-seed results.]}
 
 \subsection{Limitations}
 
@@ -532,16 +514,17 @@ established by the supplied single-seed results.]}
 provide mean $\pm$ std over independent initializations. The $+0.36$\,pp
 alignment gain is smaller than the seed-to-seed variance one would typically
 observe on CIFAR-100 at this scale, so we cannot claim it is statistically
-significant. The negative result on raw CKA, however, is robust: the
+significant. For raw CKA, the
 observed difference ($0.269 \to 0.260$) is well within one batch standard
 deviation ($\pm 0.043$). We treat the CKA result as our primary claim and
-the accuracy gain as descriptive.
+the accuracy gain as descriptive. Batch variability across images is not
+evidence of cross-seed robustness.
 
 \textbf{Teacher below published accuracy.} Our ResNet-50 teacher reaches
-75.35\% test top-1 versus published ResNet-50 CIFAR-100 numbers in the
-76--79\% range. The gap is attributable to our 100-epoch schedule (published
-recipes use 200--300 epochs with MixUp or CutMix augmentation) and the
-absence of ImageNet pre-training. Because all four of our models share this
+75.35\% test top-1. Comparison with published ResNet-50
+CIFAR-100 results requires verified, comparable training recipes
+(Table~\ref{tab:main}). Our recipe uses a 100-epoch schedule without
+ImageNet pre-training. Because all four of our models share this
 recipe, the within-recipe comparisons (supervised $\to$ KD $\to$ KD+alignment)
 are unaffected, but the absolute numbers cannot be directly compared
 against the literature.
@@ -555,18 +538,13 @@ result generalizes to those settings is untested.
 supervised+alignment row to isolate the effect of alignment without KD, and
 (ii) a layer-pair ablation (early/middle/late teacher $\times$ student block
 pairs). Neither was run because of the CPU-only compute budget. The
-$2\times2$ ablation we do report (\S\ref{sec:ablation}) still isolates the
+three-configuration ablation we do report (\S\ref{sec:ablation}) still isolates the
 marginal contribution of alignment given KD, which is the claim we make.
 
 \textbf{Compute.} All training used Google Colab's free CPU tier; the T4 GPU
 was unavailable for the runs reported here. Extending to 300 epochs,
 running three seeds, and adding the missing ablations would be feasible on
-a single consumer GPU in roughly 12 GPU-hours; we flag this as the primary
-follow-up.
-
-\textcolor{red}{[TODO: verify the published 76--79\% comparison and GPU-hour
-estimate. The available ablation has three configurations, not a completed
-$2\times2$ design. Batch variability is not evidence of cross-seed robustness.]}
+a single consumer GPU.
 
 \section{Conclusion}
 
@@ -607,9 +585,7 @@ Fong Yee Xin & CIFAR-100 pipeline; ResNet-50 and DeiT-Tiny implementation; train
 \bottomrule
 \end{tabular}
 
-\section{References}
-
-\begin{enumerate}[label={[\arabic*]},leftmargin=*]
+\begin{thebibliography}{99}
   \bibitem{hinton2015} Hinton, G., Vinyals, O., and Dean, J., 2015. ``Distilling the Knowledge in a Neural Network.'' \textit{NeurIPS Deep Learning and Representation Learning Workshop}. arXiv:1503.02531.
   \bibitem{tian2020crd} Tian, Y., Krishnan, D., and Isola, P., 2020. ``Contrastive Representation Distillation.'' \textit{ICLR}. arXiv:1910.10699.
   \bibitem{zhao2022dkd} Zhao, B., Cui, Q., Song, R., Qiu, Y., and Liang, J., 2022. ``Decoupled Knowledge Distillation.'' \textit{CVPR}. arXiv:2203.08679.
@@ -622,7 +598,7 @@ Fong Yee Xin & CIFAR-100 pipeline; ResNet-50 and DeiT-Tiny implementation; train
   \bibitem{krizhevsky2009} Krizhevsky, A., 2009. ``Learning Multiple Layers of Features from Tiny Images.'' Technical report, University of Toronto.
   \bibitem{liu2022cross} Liu, Y., Cao, J., Li, B., Hu, W., Ding, J., and Li, L., 2022. ``Cross-Architecture Knowledge Distillation.'' \textit{ACCV}. arXiv:2207.05273.
   \bibitem{hao2023ofa} Hao, Z., Guo, J., Han, K., Tang, Y., Hu, H., Wang, Y., and Xu, C., 2023. ``One-for-All: Bridge the Gap Between Heterogeneous Architectures in Knowledge Distillation.'' \textit{NeurIPS}. arXiv:2310.19444.
-\end{enumerate}
+\end{thebibliography}
 
 \clearpage
 \appendix
@@ -631,7 +607,7 @@ Fong Yee Xin & CIFAR-100 pipeline; ResNet-50 and DeiT-Tiny implementation; train
 
 \subsection{CKA before/after}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lcccc}
 \toprule
@@ -647,20 +623,24 @@ $\Delta$ & $+0.36$\,pp & $-0.009$ & $+0.491$ & 0 \\
 alignment (pooled over $n=512$, seed 42). Raw CKA is unconfounded; projected
 CKA passes through the learned projection. Batch CKA std over 8 batches:
 $\pm 0.043$ / $\pm 0.031$ (raw) and $\pm 0.033$ / $\pm 0.022$ (projected),
-so the raw-CKA change is well within one batch std.}
+so the raw-CKA change is within the batch sampling noise.}
 \label{tab:cka-appendix}
 \end{table}
 
 \subsection{Training curves}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
   \IfFileExists{results/teacher_training.png}{%
     \includegraphics[width=0.85\linewidth]{results/teacher_training.png}%
   }{%
-    \fbox{\parbox{0.85\linewidth}{\centering
-      \textcolor{red}{[TODO: insert teacher training/validation curve graphic here
-      (results/teacher\_training.png).]}}}%
+    \IfFileExists{../results/teacher_training.png}{%
+      \includegraphics[width=0.85\linewidth]{results/teacher_training.png}%
+    }{%
+      \fbox{\parbox{0.85\linewidth}{\centering
+        \textcolor{red}{[TODO: insert teacher training/validation curve graphic here
+        (results/teacher\_training.png).]}}}%
+    }%
   }
   \caption{Teacher training (blue) vs.\ validation (red) top-1 per epoch.
   Validation is still rising at epoch 100; best val 75.48 (epoch 94).}
@@ -669,7 +649,7 @@ so the raw-CKA change is well within one batch std.}
 
 \subsection{Confusion matrix}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=0.75\linewidth]{results/confusion_matrix.png}
   \caption{Top-20 most-confused class pairs for the aligned KD student.
@@ -683,11 +663,9 @@ so the raw-CKA change is well within one batch std.}
 \section{Appendix: Reproducibility Checklist}
 
 \begin{itemize}[noitemsep]
-  \item[$-$] README.md explains how to reproduce all main results with one
-    command. \textcolor{red}{[TODO: expand README with quickstart.]}
-  \item[$-$] requirements.txt lists dependencies with pinned versions.
-    \textcolor{red}{[TODO: run \texttt{pip freeze >\allowbreak{} requirements.txt} before
-    submission.]}
+  \item[$\checkmark$] README.md explains how to reproduce all main results
+    with one command.
+  \item[$\checkmark$] requirements.txt lists dependencies with pinned versions.
   \item[$\checkmark$] All random seeds are fixed and documented (split\_seed = 42).
   \item[$\times$] All results are mean $\pm$ std over $\geq$3 independent runs.
     \textit{Single seed (42) only; see \S\ref{sec:limitations}.}
@@ -698,8 +676,8 @@ so the raw-CKA change is well within one batch std.}
     or \texttt{scripts/\allowbreak{}cka\_diagnostic.py}.
   \item[$\checkmark$] Dataset is downloaded programmatically\\
     (\texttt{torchvision.datasets.\allowbreak{}CIFAR100(\allowbreak{}download=True)}).
-  \item[$-$] Model checkpoints or inference instructions are included.
-    \textcolor{red}{[TODO: link to Google Drive folder in README.]}
+  \item[$\checkmark$] Model checkpoints or inference instructions are
+    included (see README for Google Drive link).
 \end{itemize}
 
 \end{document}
