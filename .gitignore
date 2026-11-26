@@ -32,3 +32,6 @@ final/*.synctex.gz
 # Keep final test-set results
 results/*
 !results/*_test.json
+!results/*.png
+!results/tsne_coords.npz
+!results/cka_*.json
