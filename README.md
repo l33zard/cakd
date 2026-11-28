@@ -1,4 +1,4 @@
-﻿# CISC 473 Deep Learning: Cross-Architecture Knowledge Distillation
+# CISC 473 Deep Learning: Cross-Architecture Knowledge Distillation
 
 Reproduction code for P22 — ResNet-50 teacher -> DeiT-Tiny student on
 CIFAR-100, with CKA-based projected feature alignment.
@@ -18,6 +18,14 @@ Place them in `checkpoints/`:
     student_seed42_best.pt
     kd_student_seed42_best.pt
     kd_student_seed42_aligned_best.pt
+
+## Reproduce everything with one command
+
+After installing requirements and placing the checkpoints:
+
+    bash reproduce.sh
+
+This runs every command below in order (test evaluation, CKA diagnostic, figures).
 
 ## Reproduce main results (Section 4.2)
 
@@ -53,4 +61,4 @@ Expected: raw CKA 0.269 -> 0.260, projected CKA 0.348 -> 0.839.
 ## Notes
 
 - All results are single-seed (42); see the report's Limitations section.
-- Hardware: Google Colab free CPU tier (T4 unavailable for the runs reported).
+- Hardware: Google Colab free tier (T4 GPU).

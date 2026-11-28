@@ -55,8 +55,9 @@ Knowledge distillation (KD) compresses a large teacher network into a
 compact student, but feature-level KD methods assume teacher and student
 share an architectural family. We study cross-architecture KD from a
 ResNet-50 teacher to a DeiT-Tiny vision-transformer student on CIFAR-100,
-where spatial feature maps must be related to patch-token sequences. We
-reproduce logit-based KD, which improves test top-1 from 55.05\% to 61.55\%
+where spatial feature maps must be related to patch-token sequences. All
+models are trained from scratch for 100 epochs on $32\times32$ inputs, and the
+teacher reaches 75.35\% test top-1. We reproduce logit-based KD, which improves test top-1 from 55.05\% to 61.55\%
 ($+6.50$\,pp), then add CKA-based projected-feature alignment, which
 improves top-1 only marginally to 61.91\% ($+0.36$\,pp). Crucially, we
 measure teacher--student CKA similarity before and after alignment: raw CKA
@@ -66,7 +67,9 @@ trained jointly with the student. Our primary contribution is a diagnostic
 result: \textbf{CKA similarity is a weak predictor of accuracy gain} from
 feature alignment, and \textbf{projected CKA is a confounded metric} that
 inflates apparent transfer without evidence of improved representation
-similarity. We argue that future alignment work should report raw CKA, and
+similarity. A failure analysis further shows that the remaining
+teacher--student gap is dominated by fine-grained confusions within
+CIFAR-100 superclasses. We argue that future alignment work should report raw CKA, and
 we provide an open pipeline for the four-model comparison
 (supervised, KD, KD$+$alignment, and teacher) that supports this conclusion.
 \end{abstract}
@@ -144,23 +147,8 @@ aligning token-level representations directly with a CKA objective [6], adding
 no tokens to the student, and using CKA as a diagnostic of where transfer
 succeeds. These papers provide context for heterogeneous distillation, but
 they are not implemented as baselines in the narrowed project.
+A summary table of these methods is given in Appendix~\ref{app:relwork}.
 
-\begin{center}
-\begin{tabular}{llp{4.2cm}p{4.2cm}}
-\toprule
-\textbf{Method} & \textbf{Year} & \textbf{Key idea} & \textbf{Relation to our work} \\
-\midrule
-Vanilla KD [1] & 2015 & Match temperature-softened logits & Base loss term; first baseline \\
-FitNets [5] & 2015 & $L_2$ hint loss with learnable regressor & Ancestor of our projection module \\
-CKA [6] & 2019 & Invariant similarity of representations & Diagnostic and alignment loss \\
-CRD [2] & 2020 & Contrastive teacher--student MI bound & Feature-level baseline (CNN pairs) \\
-ReviewKD [4] & 2021 & Cross-stage review of teacher features & Motivates layer-pair ablation \\
-DeiT [9] & 2021 & Distillation token, CNN teacher $\rightarrow$ ViT & Logit-only CNN$\rightarrow$ViT reference \\
-DKD [3] & 2022 & Decoupled target / non-target KD & Strongest logit-only baseline \\
-OFA-KD [12] & 2023 & Distil heterogeneous features in logit space & Closest cross-architecture competitor \\
-\bottomrule
-\end{tabular}
-\end{center}
 
 \section{Method}
 
@@ -258,7 +246,7 @@ Batch size & 128 / 128 \\
 Training duration & 100 epochs / 100 epochs \\
 Augmentation & Random crop (pad 4) + horizontal flip \\
 Seeds & 42 (single seed---see \S\ref{sec:limitations}) \\
-Hardware & Google Colab free CPU tier (T4 unavailable) \\
+Hardware & Google Colab free tier (T4 GPU) \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -341,7 +329,7 @@ our hypothesis that projected-feature alignment is marginally beneficial.
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{results/tsne.png}
-  \caption{t-SNE of penultimate features for 2{,}000 seeded CIFAR-100 test
+  \caption{t-SNE of intermediate features for 2{,}000 seeded CIFAR-100 test
   images: teacher layer3 (left), unaligned KD student block8 (middle),
   aligned KD student block8 (right). Points coloured by CIFAR-100 superclass
   (20 groups). Embeddings fitted independently per model; absolute positions
@@ -349,8 +337,8 @@ our hypothesis that projected-feature alignment is marginally beneficial.
   \label{fig:tsne}
 \end{figure}
 
-Figure~\ref{fig:tsne} shows t-SNE projections of teacher and student
-penultimate features. Following standard practice we fit each embedding
+Figure~\ref{fig:tsne} shows t-SNE projections of teacher layer3 and student
+block-8 patch-token features. Following standard practice we fit each embedding
 independently, so the projections are informative about \emph{within-model
 cluster structure} but cannot be compared by direct overlap
 \cite{kornblith2019}. We therefore report two qualitative observations.
@@ -496,16 +484,6 @@ close this gap. A more targeted alignment --- for example, class-conditional
 CKA or an alignment loss weighted by teacher confidence on fine-grained
 pairs --- is a natural next step.
 
-Finally, on the midterm's generalization-gap observation for the teacher
-(99.99\% training vs.\ 75.48\% validation top-1): the training curve shows
-validation top-1 still climbing at epoch 100 with learning rate
-$\approx 0.008$, suggesting the teacher was undertrained rather than
-over-regularized. Extending the schedule to 200--300 epochs, adding label
-smoothing, or replacing crop$+$flip with RandAugment would all be cheap
-interventions in a GPU setting and would in our expectation narrow the gap
-to published ResNet-50 CIFAR-100 baselines. We did not pursue them because
-CPU-only compute made each 100-epoch run the dominant cost.
-
 \subsection{Limitations}
 
 \label{sec:limitations}
@@ -537,14 +515,14 @@ result generalizes to those settings is untested.
 \textbf{Missing ablations.} The midterm plan included (i) a
 supervised+alignment row to isolate the effect of alignment without KD, and
 (ii) a layer-pair ablation (early/middle/late teacher $\times$ student block
-pairs). Neither was run because of the CPU-only compute budget. The
+pairs). Neither was run because of the free-tier GPU compute budget. The
 three-configuration ablation we do report (\S\ref{sec:ablation}) still isolates the
 marginal contribution of alignment given KD, which is the claim we make.
 
-\textbf{Compute.} All training used Google Colab's free CPU tier; the T4 GPU
-was unavailable for the runs reported here. Extending to 300 epochs,
-running three seeds, and adding the missing ablations would be feasible on
-a single consumer GPU.
+\textbf{Compute.} All training used Google Colab's free tier (T4 GPU), whose
+session and usage limits bounded the number of runs. Extending to 300 epochs,
+running three seeds, and adding the missing ablations would be feasible with
+dedicated GPU access.
 
 \section{Conclusion}
 
@@ -605,27 +583,25 @@ Fong Yee Xin & CIFAR-100 pipeline; ResNet-50 and DeiT-Tiny implementation; train
 
 \section{Appendix: Additional Results}
 
-\subsection{CKA before/after}
+\subsection{Related-work summary}
+\label{app:relwork}
 
-\begin{table}[htbp]
-\centering
-\begin{tabular}{lcccc}
+\begin{center}
+\begin{tabular}{llp{4.2cm}p{4.2cm}}
 \toprule
-\textbf{Student} & \textbf{Test top-1} & \textbf{Raw CKA} & \textbf{Proj.\ CKA} & \textbf{Rank $P(F_T)$} \\
+\textbf{Method} & \textbf{Year} & \textbf{Key idea} & \textbf{Relation to our work} \\
 \midrule
-KD, unaligned & 61.55 & $0.269$ & $0.348$ & 192 \\
-KD, aligned & \textbf{61.91} & $0.260$ & \textbf{0.839} & 192 \\
-\midrule
-$\Delta$ & $+0.36$\,pp & $-0.009$ & $+0.491$ & 0 \\
+Vanilla KD [1] & 2015 & Match temperature-softened logits & Base loss term; first baseline \\
+FitNets [5] & 2015 & $L_2$ hint loss with learnable regressor & Ancestor of our projection module \\
+CKA [6] & 2019 & Invariant similarity of representations & Diagnostic and alignment loss \\
+CRD [2] & 2020 & Contrastive teacher--student MI bound & Feature-level baseline (CNN pairs) \\
+ReviewKD [4] & 2021 & Cross-stage review of teacher features & Motivates layer-pair ablation \\
+DeiT [9] & 2021 & Distillation token, CNN teacher $\rightarrow$ ViT & Logit-only CNN$\rightarrow$ViT reference \\
+DKD [3] & 2022 & Decoupled target / non-target KD & Strongest logit-only baseline \\
+OFA-KD [12] & 2023 & Distil heterogeneous features in logit space & Closest cross-architecture competitor \\
 \bottomrule
 \end{tabular}
-\caption{Teacher$\leftrightarrow$student CKA before and after feature
-alignment (pooled over $n=512$, seed 42). Raw CKA is unconfounded; projected
-CKA passes through the learned projection. Batch CKA std over 8 batches:
-$\pm 0.043$ / $\pm 0.031$ (raw) and $\pm 0.033$ / $\pm 0.022$ (projected),
-so the raw-CKA change is within the batch sampling noise.}
-\label{tab:cka-appendix}
-\end{table}
+\end{center}
 
 \subsection{Training curves}
 
@@ -647,6 +623,17 @@ so the raw-CKA change is within the batch sampling noise.}
   \label{fig:training}
 \end{figure}
 
+On the midterm's generalization-gap observation for the teacher
+(99.99\% training vs.\ 75.48\% validation top-1): the training curve shows
+validation top-1 still climbing at epoch 100 with learning rate
+$\approx 0.008$, suggesting the teacher was undertrained rather than
+over-regularized. Extending the schedule to 200--300 epochs, adding label
+smoothing, or replacing crop$+$flip with RandAugment would all be cheap
+interventions with more GPU time and would in our expectation narrow the gap
+to published ResNet-50 CIFAR-100 baselines. We did not pursue them because
+the free-tier GPU budget made each 100-epoch run the dominant cost.
+
+
 \subsection{Confusion matrix}
 
 \begin{figure}[htbp]
@@ -664,7 +651,7 @@ so the raw-CKA change is within the batch sampling noise.}
 
 \begin{itemize}[noitemsep]
   \item[$\checkmark$] README.md explains how to reproduce all main results
-    with one command.
+    with one command (\texttt{bash reproduce.sh}).
   \item[$\checkmark$] requirements.txt lists dependencies with pinned versions.
   \item[$\checkmark$] All random seeds are fixed and documented (split\_seed = 42).
   \item[$\times$] All results are mean $\pm$ std over $\geq$3 independent runs.
